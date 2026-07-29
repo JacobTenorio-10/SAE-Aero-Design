@@ -1,0 +1,184 @@
+﻿"b"             = 1150      'wingspan [mm]  NO cap, but span is PENALIZED -> minimize
+"c_root"        = 225       'root chord [mm]
+"c_tip"         = 225       'tip chord [mm]
+"sweep_LE"      = 11.02     'LE sweep [deg]
+"dihedral"      = 4         'dihedral [deg]
+"i_wing"        = 0.0       'wing incidence [deg]
+"twist_tip"     = 0.0       'tip washout [deg] (negative = washout; angle, not a distance)
+"b_semi"        = 518       'main lifting-panel semi-span on PLN_Dihedral [mm]; ABSOLUTE (was "b"/2). b/2 = 575 = 518 panel + 57 vertical tip; winglet modeled downstream
+"taper"         = "c_tip" / "c_root"
+"S_w"           = ("c_root" + "c_tip") / 2 * "b"
+"AR"            = "b"^2 / "S_w"
+"MAC"           = (2/3) * "c_root" * (1 + "taper" + "taper"^2) / (1 + "taper")
+"y_MAC"         = ("b" / 6) * (1 + 2*"taper") / (1 + "taper")
+"x_MAC_LE"      = "y_MAC" * tan("sweep_LE" * pi/180)   'AFT distance of MAC LE from wing LE [mm]
+"x_MAC_c4"      = "x_MAC_LE" + 0.25 * "MAC"            'AFT distance of MAC c/4 [mm]
+"spar_main_pct" = 0.25      'main spar @ %chord
+"spar_rear_pct" = 0.70      'rear spar @ %chord
+"n_rib"         = 7         'ribs per semi-span
+"rib_root_off"  = 20        'first rib offset from centerline [mm] (spanwise)
+"rib_thk"       = 3.0
+"sparcap_w"     = 6.0
+"sparcap_h"     = 6.0
+"web_thk"       = 1.5
+"LE_sheet_pct"  = 0.30
+"tc_root"       = 0.14
+"tc_tip"        = 0.14
+"rib_pitch"     = ("b_semi" - "rib_root_off") / ("n_rib" - 1)   'spanwise pitch [mm]
+"rib_root_off_physical" = "rib_root_off" * sqr("b_semi"^2 + ("b_semi"*tan("dihedral"*pi/180))^2 + ("spar_main_pct"*("c_root"-"c_tip"))^2) / "b_semi"   'first rib offset ALONG 3D spar (physical) [mm]; = rib_root_off * (3D spar len / semi-span); tracks rib_root_off
+"x_spar_root"   = "spar_main_pct" * "c_root"   'AFT distance of main spar @ root [mm]
+"x_rspar_root"  = "spar_rear_pct" * "c_root"   'AFT distance of rear spar @ root [mm]
+"x_rspar_tip"   = "spar_rear_pct" * "c_tip"    'AFT distance of rear spar @ tip [mm]
+"x_joiner_root" = "x_spar_root"   'AFT distance of wing joiner/spar-tube @ root [mm]; co-located with main spar
+"V_H"           = 0.98      'horizontal tail volume coeff
+"l_HT"          = 780        'wing c/4 -> HT c/4 arm [mm]; yields x_HT_LE_root = 850 aft (matches XFLR5 LE-to-LE)
+"AR_HT"         = 2.35
+"taper_HT"      = 1.00
+"i_HT"          = -2.0      'HT incidence [deg] (angle, not a distance)
+"sweep_HT"      = 0
+"c_elev_pct"    = 0.35
+"S_HT"          = "V_H" * "S_w" * "MAC" / "l_HT"
+"b_HT"          = sqr("AR_HT" * "S_HT")
+"b_semi_HT"     = "b_HT" / 2                           'horizontal tail semi-span [mm]
+"c_root_HT"     = 2 * "S_HT" / ("b_HT" * (1 + "taper_HT"))
+"c_tip_HT"      = "c_root_HT" * "taper_HT"
+"MAC_HT"        = (2/3) * "c_root_HT" * (1 + "taper_HT" + "taper_HT"^2) / (1 + "taper_HT")
+"y_MAC_HT"      = ("b_HT" / 6) * (1 + 2*"taper_HT") / (1 + "taper_HT")
+"x_HT_c4"       = "x_MAC_c4" + "l_HT"          'AFT distance of HT c/4 (same side as wing c4 -> sum) [mm]
+"x_HT_LE_root"  = "x_HT_c4" - 0.25 * "c_root_HT"   'AFT distance of HT root LE [mm]
+"V_V"           = 0.073     'vertical tail volume coeff
+"l_VT"          = 780        'wing c/4 -> VT c/4 arm [mm]; yields x_VT_LE_root = 850 aft (matches XFLR5 LE-to-LE)
+"AR_VT"         = 1.54
+"taper_VT"      = 0.53
+"sweep_VT"      = 16.70
+"c_rud_pct"     = 0.40
+"S_VT"          = "V_V" * "S_w" * "b" / "l_VT"
+"b_VT"          = sqr("AR_VT" * "S_VT")
+"c_root_VT"     = 2 * "S_VT" / ("b_VT" * (1 + "taper_VT"))
+"c_tip_VT"      = "c_root_VT" * "taper_VT"
+"MAC_VT"        = (2/3) * "c_root_VT" * (1 + "taper_VT" + "taper_VT"^2) / (1 + "taper_VT")
+"x_VT_c4"       = "x_MAC_c4" + "l_VT"          'AFT distance of VT c/4 (same side as wing c4 -> sum) [mm]
+"x_VT_LE_root"  = "x_VT_c4" - 0.25 * "c_root_VT"   'AFT distance of VT root LE [mm]
+"L_fuse"        = "x_fuse_nose" + "x_fuse_tail"   'total fuselage length [mm] = nose-fwd + tail-aft (derived)
+"w_fuse"        = 101.6      'max width [mm] = 4 in (cabin cross-section)
+"h_fuse"        = 101.6      'max height [mm] = 4 in (cabin cross-section)
+"h_fuse_top"    = 76.2       'top keel ABOVE waterline [mm]; = 75% of h_fuse (3 in); bottom keel = h_fuse - h_fuse_top (1 in)
+"x_motor"       = 152.40    'motor/prop FORWARD distance from LE [mm]  (+Z side)
+"nose_len"      = 152.40    'nose-cone / front-taper length [mm] = 6 in (nose tip -> firewall)
+"x_nose"        = "x_motor" + "nose_len"   'nose-tip FORWARD distance from LE [mm]  (+Z side); firewall + 6 in taper
+"tail_exit_D"   = 19.05     'tail-cone exit bounding diameter [mm] = 0.75 in
+"crown_sh_pct"  = 0.65      'cabin crown Style-Spline side-control height / h_fuse (vertical rise; larger=squarer)
+"crown_apex_pct"= 0.30      'cabin crown Style-Spline flat-apex control half-width / (w_fuse/2)
+"c_ail_pct"     = 0.25
+"ail_in_pct"    = 0.55
+"ail_out_pct"   = 0.95
+"c_flap_pct"    = 0.30
+"flap_in_pct"   = 0.10
+"flap_out_pct"  = 0.55
+"y_ail_in"      = "ail_in_pct"   * "b_semi"
+"y_ail_out"     = "ail_out_pct"  * "b_semi"
+"y_flap_in"     = "flap_in_pct"  * "b_semi"
+"y_flap_out"    = "flap_out_pct" * "b_semi"
+"D_prop"        = 280       'prop diameter [mm]
+"motor_L"       = 50.80     'main motor length [mm] = 2.00 in
+"motor_D"       = 39.37     'main motor max diameter [mm] = 1.55 in
+"thrust_down"   = 2         'down-thrust [deg]
+"thrust_side"   = 1         'right-thrust [deg]
+"h_thrust"      = 160       'thrust-line height above ground [mm]
+"y_motor_offset" = 20       'motor/thrust-line vertical offset from wing-root Origin [mm]; 0 = inline
+"n_cells"       = 4         'LiPo cells (<=4 per rules)
+"P_limit"       = 450       'power limiter [W]
+"keepout"       = 228.6     'prop safety keep-out = 9 in [mm]
+"prop_clear"    = "h_thrust" - "D_prop" / 2   'prop tip-to-ground clearance [mm] (vertical, >0)
+"track"         = 260       'main-gear track [mm] (lateral)
+"x_main"        = 40        'main-gear axle AFT distance from LE [mm]  (-Z side)
+"x_aux"         = 260       'nose-wheel FORWARD distance from LE [mm]  (+Z side)
+"wheel_main"    = 60
+"w_wheel"       = 25        'main tire axial width [mm] (along X; front-view wheel-rectangle width)
+"wheel_aux"     = 45
+"gear_h"        = "wheel_main" / 2   'axle ht above ground = wheel_main/2 (tire flush) [mm]
+"wheel_base"    = "x_main" + "x_aux"   'main (aft) + nose (fwd) on opposite sides -> SUM [mm]
+"W_empty"       = 1100      'empty weight [g]
+"W_container"   = 120       'payload container [g]
+"V_water"       = 2000      'water volume [cm^3] (>= 1981 = 67 fl oz)
+"rho_water"     = 1.0       '[g/cm^3]
+"CG_pct"        = 0.28      'target CG @ %MAC aft of MAC LE
+"x_NP"          = 95        'neutral-point AFT distance from LE [mm]  SET from XFLR5/AVL
+"SM_min"        = 0.08      'min static margin
+"SM_max"        = 0.15      'max static margin
+"W_water"       = "V_water" * "rho_water"
+"W_payload"     = "W_water"
+"W_TO"          = "W_empty" + "W_container" + "W_water"
+"x_CG"          = "x_MAC_LE" + "CG_pct" * "MAC"   'AFT distance of target CG [mm]
+"SM"            = ("x_NP" - "x_CG") / "MAC"        'static margin (NP, CG both aft distances)
+"x_CG_aft"      = "x_NP" - "SM_min" * "MAC"        'aft CG limit, AFT distance [mm]
+"x_CG_fwd"      = "x_NP" - "SM_max" * "MAC"        'fwd CG limit, AFT distance [mm]
+"WL_g_dm2"      = "W_TO" / "S_w" * 10000           'wing loading [g/dm^2]
+"cabin_len"     = 254        'constant-section cabin length [mm] = 10 in (firewall 6 in fwd + rear wall 4 in aft)
+"x_bay"         = 60        'water-mass centroid AFT station from LE [mm]  (-Z side); MASS BOOKKEEPING ONLY - no geometry, no plane, not dimensioned
+"x_drain"       = 70        'bottom drain-port AFT distance from LE [mm]  (-Z side)
+"x_arm_plug"    = 30        'arming-plug AFT distance from LE [mm]  (-Z side, on top)
+"x_switch"      = 70        'on/off switch AFT distance from LE [mm]  (-Z side, on top)
+"x_ballast"     = 150       'ballast FORWARD distance from LE [mm]  (+Z side)
+"bat_L"         = 78.74     'propulsion 4S LiPo length [mm] = 3.10 in
+"bat_W"         = 34.29     'propulsion 4S LiPo width [mm] = 1.35 in
+"bat_H"         = 34.29     'propulsion 4S LiPo height [mm] = 1.35 in
+"avi_bat_L"     = 60.96     'avionics battery length [mm] = 2.40 in
+"avi_bat_W"     = 30.48     'avionics battery width [mm] = 1.20 in
+"avi_bat_H"     = 22.86     'avionics battery height [mm] = 0.90 in
+"x_bat"         = 120       'battery FORWARD distance from LE [mm]  (+Z side)
+"arm_clear"     = "x_arm_plug" + "x_motor" - "keepout"   'plug (aft) + prop (fwd), opposite sides -> SUM, minus 9 in
+"sw_clear"      = "x_switch" + "x_motor" - "keepout"     'switch (aft) + prop (fwd), opposite sides -> SUM, minus 9 in
+"x_fuse_nose"    = "x_nose"                'FUSE STATION: nose-tip plane, FORWARD of Origin [mm]  (+Z side)
+"x_fuse_firewall" = "x_motor"              'FUSE STATION: firewall / engine-face plane, FORWARD [mm]  (+Z side)
+"x_fuse_bay_fwd" = 50.00  'FUSE STATION: fwd cabin sub-station plane, FORWARD of Origin [mm]  (+Z side); ABSOLUTE (self-anchored, tracks nothing); loft skips this plane
+"x_fuse_bay_aft" = 101.60 'FUSE STATION: cabin (constant-section) AFT wall, AFT of Origin [mm]  (-Z side)
+"x_fuse_tail"    = 152.40    'FUSE STATION: pod tail-tip plane, AFT of Origin [mm]  (-Z side); 2 in aft of cabin rear; M2->TT gap = boom sleeve
+"span_ft"       = "b" / 304.8
+"W_pay_lb"      = "W_payload" / 453.592
+"W_empty_lb"    = "W_empty" / 453.592
+"TO_target_ft"  = 10
+"h_nose_top"            = 60.0364   'Exact height of nose flat top ABOVE waterline [mm] (raised +47.5 for 75% lift)
+"h_nose_bottom"         = 9.2364    'Exact height of nose flat bottom ABOVE waterline [mm] (crossed above WL after 75% lift)
+"h_nose_break_top"      = 68.1182   'Exact height of nose top shoulder break (M1) ABOVE waterline [mm] (raised +47.5 for 75% lift)
+"h_nose_break_bottom"   = 13.3096   'Exact depth of nose belly shoulder break (M4) BELOW waterline [mm] (still below; raised +47.5)
+"h_tail_break_top"      = 60    'Exact height of tail top shoulder break (M2) ABOVE waterline [mm] (75% of the 3.46 in M2-M3 split)
+"h_tail_break_bottom"   = 13.3096    'Exact depth of tail belly shoulder break (M3) BELOW waterline [mm] (25% of the 3.46 in M2-M3 split; positive magnitude, dimension downward)
+"w_fuse_break"          = 38.10     'Exact port half-width at planform transition breaks (P1/P2) [mm]
+"h_tail_top"            = 35.78915    'Exact height of tail flat top ABOVE waterline [mm]
+"h_tail_bottom"         = 10.38915    'Exact height of tail flat bottom ABOVE waterline [mm]
+"x_fuse_midnose"        = 228.60 'Absolute Z-station of the fwd break column (M1/M4/P1) forward of LE [mm]; nose midpoint
+"x_fuse_midtail"        = 127.00 'Absolute Z-station of the aft break column (M2/M3/P2) aft of LE [mm]; = x_fuse_bay_aft + 1 in
+"w_fuse_nose_half"      = 25.40     'Exact port half-width of blunt nose face [mm] (Old: w_fuse / 4)
+"w_fuse_break_fwd"      = 41.9054   'Exact port half-width at forward shoulder break (P1) [mm]
+"w_fuse_cabin_fwd_half" = 50.80     'Exact port half-width at front firewall corner (CL) [mm] (Old: w_fuse / 2)
+"w_fuse_cabin_aft_half" = 50.80     'Exact port half-width at rear cabin corner (TL) [mm] (Old: w_fuse / 2)
+"w_fuse_break_aft"      = 33.6493   'Exact port half-width at rear taper shoulder break (P2) [mm]
+"w_fuse_tail_half"      = 12.7    'Exact port half-width of tail cone exit cap (EL) [mm] (Old: tail_exit_D / 2)
+"x_fuse_sleeve_top"     = 177.80    'Absolute Z-station of sleeve top-aft vertex (SL_T) aft of LE [mm]; = x_fuse_tail + 1 in
+"h_sleeve_top"          = 35.78915    'Exact height of sleeve top-aft vertex (SL_T) ABOVE waterline [mm]; = tail_exit_D / 2, absolutized
+"x_fuse_sleeve_bottom"  = 177.80    'Absolute Z-station of sleeve bottom-aft vertex (SL_B) aft of LE [mm]; = x_fuse_tail + 1 in
+"h_sleeve_bottom"       = 10.38915    'Exact depth of sleeve top-aft vertex (SL_B) ABOVE waterline [mm]; positive magnitude, dimension downward
+"x_fuse_sleeve_plan"    = 177.80    'Absolute Z-station of planform sleeve vertices (SL_P/SL_C) aft of LE [mm]; = x_fuse_tail + 1 in
+"w_fuse_sleeve_half"    = 12.7    'Exact port half-width at sleeve end (SL_P) [mm]; = tail_exit_D / 2, absolutized
+"servo_L"        = 23        'ail/flap servo body length, chordwise +Z [mm] (starter)
+"servo_W"        = 12        'ail/flap servo body width, spanwise X [mm] (starter)
+"servo_H"        = 22        'ail/flap servo body height, vertical Y [mm] (starter)
+"hatch_open_deg" = 75        'payload drop-door max open angle from closed [deg] (starter)
+"horn_R"         = 12        'drop-door servo output-horn radius [mm] (starter)
+"link_L"         = 30        'drop-door actuation push-link length [mm] (starter)
+"tail_steer_rake"= 12        'taildragger tailwheel kingpin rake from vertical [deg] (starter)
+"wheel_tail_dia" = 30        'taildragger tailwheel diameter [mm] (starter)
+"h_wing_seat"    = 20        'wing-seat structural-deck height above waterline +Y [mm] (starter)
+"w_wing_seat"    = 90        'lateral spacing of port/starboard shear-tie faces [mm] (starter)
+"bolt_pitch"     = 30        'wing-mount bolt-hole spacing along seat [mm] (starter)
+"bolt_dia"       = 5         'wing-mount bolt-hole diameter [mm] (starter)
+"plumb_drop"     = 25        'drain/plumbing stack projection BELOW bottom keel [mm] (starter)
+"belly_margin"   = 15        'min belly-to-ground gap retained at full gear compression [mm] (starter)
+"x_steer_servo"  = 250       'ground-steering servo AFT station from LE [mm] (-Z) (starter)
+"n_rib_HT"       = 4         'ribs per HT semi-span; HT section-plane pattern count (starter)
+"rib_pitch_HT"   = "b_semi_HT" / ("n_rib_HT" - 1)   'HT rib-plane spanwise pitch [mm]; seeds LPTN_RibPlanes_HT, last plane at b_HT/2 (derived, tracks n_rib_HT)
+"n_rib_VT"       = 4         'section planes per VT fin height; VT pattern count (starter)
+"rib_pitch_VT"   = "b_VT" / ("n_rib_VT" - 1)   'VT section-plane pitch up +Y [mm]; seeds LPTN_RibPlanes_VT, last plane at b_VT (derived, tracks n_rib_VT)
+"dihedral_HT"    = 0         'HT dihedral [deg]; drives PLN_Dihedral_HT tilt (0 = flat, on Top Plane)
+"dihedral_VT"    = 0         'VT fin cant [deg]; drives PLN_Dihedral_VT tilt (0 = in Right Plane)
