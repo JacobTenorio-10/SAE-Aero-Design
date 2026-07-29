@@ -283,20 +283,22 @@ Budget ~15 minutes. You're loading `skeleton_equations_micro.txt` into the part'
 
 **3.4 — Verify it solves.** No row should be red. Tick **Automatically rebuild**, click **OK**, then **Ctrl-Q** (force rebuild). A red variable almost always means a typo or a stray comment, not a missing dependency — SolidWorks resolves the dependency graph regardless of line order.
 
-**3.5 — Sanity-check against a hand calc.** With the starter inputs (`b=1100`, `c_root=300`, `c_tip=180`, `V_H=0.5`, `l_HT=600`, `AR_HT=4`, `V_V=0.04`, `l_VT=570`, `AR_VT=1.5`), the dialog should read approximately:
+**3.5 — Sanity-check against a hand calc.** With the current inputs (`b=1150`, `c_root=225`, `c_tip=225`, `V_H=0.98`, `l_HT=780`, `AR_HT=2.35`, `V_V=0.073`, `l_VT=780`, `AR_VT=1.54`), the dialog should read approximately:
+
+> **These numbers are deliberately restated — this is the one place that is correct.** Everywhere else in this guide, cite the global and let it carry the value. A cross-check table has to hold an *independent* copy or it checks nothing. Regenerate it by hand whenever a wing or tail input changes; `values_audit.py` will list it, and this section is the expected exception.
 
 | Variable | Expected |
 |---|---|
-| `taper` | 0.60 |
-| `S_w` | ≈ 264 000 mm² (26.4 dm²) |
-| `AR` | ≈ 4.58 |
-| `MAC` | ≈ 245 mm |
-| `y_MAC` | ≈ 252 mm |
-| `S_HT` | ≈ 53 900 mm² |
-| `b_HT` | ≈ 464 mm |
-| `S_VT` | ≈ 20 400 mm² |
-| `b_VT` | ≈ 175 mm |
-| `WL_g_dm2` | ≈ 122 g/dm² |
+| `taper` | 1.00 (untapered) |
+| `S_w` | ≈ 258 750 mm² (25.9 dm²) |
+| `AR` | ≈ 5.11 |
+| `MAC` | ≈ 225 mm (= `c_root`, untapered) |
+| `y_MAC` | ≈ 287.5 mm |
+| `S_HT` | ≈ 73 100 mm² |
+| `b_HT` | ≈ 414.6 mm |
+| `S_VT` | ≈ 27 800 mm² |
+| `b_VT` | ≈ 207.1 mm |
+| `WL_g_dm2` | ≈ 124.4 g/dm² |
 
 If these match, the import and the equation graph are correct. If `MAC`/`y_MAC` are off, suspect a units mismatch (3.1).
 
@@ -312,8 +314,16 @@ If these match, the import and the equation graph are correct. If `MAC`/`y_MAC` 
 
 > **Dynamic-tracking globals (read before laying out the side/front views).** Three globals are deliberately *derived* or *convention-bound* so the airframe self-corrects — never hard-type over them:
 > - `y_motor_offset` `= 20` — motor/thrust-line height relative to the wing-root Origin (MMGS), carried as a **positive magnitude** like every other distance global in this model. The global gives the *distance*; **you** pick the *direction* when you dimension it — place the thrust point on the side of the Origin you want, then type the global bare. `0` runs the thrust line through the wing root. It decouples the thrust axis from the wing datum and is consumed by the side profile (§4.5), the front view (§6.6), the Ground Line (§6.7), and the authoritative prop-disk sketch (§7.3.5) — dimension it the same direction in all four or they will disagree on rebuild.
-> - `gear_h` `= "wheel_main" / 2` — axle height above the Ground Line tracks the tire radius, so the tire bottom stays **permanently flush** on the ground at any `wheel_main`.
-> - `prop_clear` `= "h_thrust" - "D_prop" / 2` — prop tip-to-ground clearance. Because the Ground Line is anchored `h_thrust` below the **thrust center** (§6.7), not the Origin, this stays valid for **any** `y_motor_offset`.
+> - `gear_h` `= "gear_h"` — axle height above the Ground Line tracks the tire radius, so the tire bottom stays **permanently flush** on the ground at any `wheel_main`.
+> - `prop_clear` `= "prop_clear"` — prop tip-to-ground clearance. Because the Ground Line is anchored `h_thrust` below the **thrust center** (§6.7), not the Origin, this stays valid for **any** `y_motor_offset`.
+
+> **⭐ THE ONE-VARIABLE RULE — every Smart Dimension takes exactly one global, never an expression.** If a dimension needs a computed value, the computation belongs in `skeleton_equations_micro.txt` as its own named global, and the **Modify** box gets `= "that_global"` and nothing else. No arithmetic, no `cos`/`tan`, no nested parentheses, no bare numbers typed into SolidWorks.
+>
+> **Why:** an expression typed into a dimension is invisible to the equations file, so it cannot be audited, cannot be found by `where_used.py`, and silently disagrees with the model the moment one of its inputs moves. A named global is one fact in one place. It also means a value change never requires touching this guide — you edit the `.txt` and rebuild.
+>
+> This applies to **Smart Dimension**, **Offset Distance** on reference planes, and the **Modify** box everywhere. It does **not** apply to spreadsheet cells in the §8.2 / §8.6 airfoil import, which are Excel formulas, not SolidWorks dimensions. Where this guide shows a global's *definition* (`x_nose` `= "x_motor" + "nose_len"`), that is documentation of the equations file, not something you type into a dimension.
+>
+> Verify with `python3 check.py` — it fails the build if any dimension instruction in this guide carries an expression.
 
 **Fuselage longitudinal stations (Dedicated Fuselage Plane Strategy).** To decouple the fuselage from the wing rib grid, five stations drive dedicated fuselage planes (§7.3.6) straight off the SolidWorks $Z$-axis — independent of `rib_pitch` / `n_rib`, so flexing the wing never rebuilds the fuselage. Every value is a **positive** offset from the Front Plane; the *Side* column gives which side of the wing-root Origin it lands on (**+Z** = forward / nose, **−Z** = aft / tail). Two boundaries are **hard design limits**: the nose-tip-to-firewall front taper is pinned to **6 in** through `nose_len`, and the tail plane is pinned to **152.40 mm aft** through `x_fuse_tail` — the pod tail-cone exit. The empennage sits far aft of the pod on a **tail boom** that is deliberately **not** modeled in this skeleton; the `M2` → `TT` gap doubles as its sleeve.
 
@@ -347,8 +357,8 @@ If these match, the import and the equation graph are correct. If `MAC`/`y_MAC` 
 
 | Breakpoint | Longitudinal ($Z$, from Wing-LE datum) | Height ($Y$, from waterline) | Side |
 |---|---|---|---|
-| `M1` (nose-top) | `= ("x_fuse_nose" + "x_fuse_firewall") / 2` | `= "h_nose_break_top"` | +Z fwd, +Y |
-| `M4` (nose-bottom) | `= ("x_fuse_nose" + "x_fuse_firewall") / 2` | `= "h_nose_break_bottom"` | +Z fwd, −Y |
+| `M1` (nose-top) | `= "x_fuse_midnose"` | `= "h_nose_break_top"` | +Z fwd, +Y |
+| `M4` (nose-bottom) | `= "x_fuse_midnose"` | `= "h_nose_break_bottom"` | +Z fwd, −Y |
 | `M2` (tail-top) | `= "x_fuse_midtail"` | `= "h_tail_break_top"` | −Z aft, +Y |
 | `M3` (tail-bottom) | `= "x_fuse_midtail"` | `= "h_tail_break_bottom"` | −Z aft, −Y |
 
@@ -422,7 +432,7 @@ The profile has **ten elements — six straight, four spline:**
 | Column | Vertices | Dimension ($Z$ to datum) |
 |---|---|---|
 | Nose | `NT` / `NB` | `= "x_fuse_nose"` (+Z) |
-| Mid-nose | `M1` / `M4` | `= ("x_fuse_nose" + "x_fuse_firewall") / 2` (+Z) |
+| Mid-nose | `M1` / `M4` | `= "x_fuse_midnose"` (+Z) |
 | Firewall | `TF` / `BF` | `= "x_fuse_firewall"` (+Z) |
 | Cabin-rear | `TR` / `BR` | `= "x_fuse_bay_aft"` (−Z) |
 | Mid-tail | `M2` / `M3` | `= "x_fuse_midtail"` (−Z) |
@@ -435,13 +445,13 @@ The profile has **ten elements — six straight, four spline:**
 **Phase 3 — Straddle the waterline with the constant-height cabin.** The cabin keels span firewall → cabin-rear at a constant height. Do **not** place a single blanket `h_fuse` dimension between them — that leaves the waterline floating and lets the section drift on rebuild. Pin each keel to the waterline instead:
 1. Confirm the **Horizontal** relation on the **top keel** (`TF → TR`) and the **bottom keel** (`BF → BR`).
 2. **Smart Dimension** the **top keel** to the **waterline** centerline → `= "h_fuse_top"`.
-3. **Smart Dimension** the **bottom keel** to the **waterline** centerline → `= "h_fuse" - "h_fuse_top"`.
+3. **Smart Dimension** the **bottom keel** to the **waterline** centerline → `= "h_fuse_bottom"`.
 
    The two always sum to `h_fuse`, so the section stays anchored to the waterline on every rebuild; bias the straddle by editing `h_fuse_top` alone. Because the firewall column sits at `x_fuse_firewall` (= `x_motor`), confirm it also clears the battery forward edge (`x_bat + bat_L/2`); the keel then runs aft unbroken to the cabin-rear column.
 
 **Phase 4 — Set the flat nose face and the boom-sleeve box.** The nose face and the sleeve end face are **finite vertical faces**, not points — a zero-height apex would collapse the §8.5 end-cap loft.
 1. Nose flat (`NT`–`NB`): **Smart Dimension** `NT` to the waterline → `= "h_nose_top"`, and `NB` to the waterline → `= "h_nose_bottom"`. These are **absolute-millimeter** globals (17.50 / 37.50 mm) — one exact height each, no fractional split.
-2. Sleeve root (`TT`–`TB`) — **tail-cone termination.** The tail station does **not** inherit the cabin's top/belly bias; it pinches to the `tail_exit_D` = 0.75-in bounding closure. **Smart Dimension** `TT` to the waterline → `= "tail_exit_D" / 2`, and `TB` to the waterline → `= "tail_exit_D" / 2`, placing `TT` **above** and `TB` **below** the waterline. The station closes symmetric about the waterline at a $19.05$ mm bounding height, matching the $19.05$ mm planform width (§5.3.5).
+2. Sleeve root (`TT`–`TB`) — **tail-cone termination.** The tail station does **not** inherit the cabin's top/belly bias; it pinches to the `tail_exit_D` = 0.75-in bounding closure. **Smart Dimension** `TT` to the waterline → `= "h_tail_top"`, and `TB` to the waterline → `= "h_tail_bottom"`. Both are **positive magnitudes above** the waterline. The station closes symmetric about the waterline at a $19.05$ mm bounding height, matching the $19.05$ mm planform width (§5.3.5).
 3. Sleeve end (`SL_T`–`SL_B`) — **the new aft end of the fuselage.** Confirm the **Horizontal** relation on `TT → SL_T` and on `SL_B → TB`; the two sleeve walls must run dead-flat so the sleeve is a constant-section box the boom can slide into. **Smart Dimension** `SL_T` to the waterline → `= "h_sleeve_top"` (**above**, $+Y$), and `SL_B` to the waterline → `= "h_sleeve_bottom"` (**below**, $-Y$). Both globals are **positive magnitudes** — the global carries the distance, you pick the side as you place the dimension.
 4. **Verify the sleeve is square and 1 in long.** The end face spans `h_sleeve_top` $+$ `h_sleeve_bottom` $= 19.05$ mm, the walls run `x_fuse_sleeve_top` $-$ `x_fuse_tail` $= 25.40$ mm ($1$ in), and the planform half-width (§5.3.5) matches at `w_fuse_sleeve_half` $= 9.5250$ — a clean $19.05 \times 19.05$ mm bore equal to `tail_exit_D`.
 
@@ -476,7 +486,7 @@ The profile has **ten elements — six straight, four spline:**
 
 **4.5 — Draw the thrust line (vertically decoupled from the wing root).** The motor/thrust line no longer rides on the wing-root waterline; its height is a master parameter, `y_motor_offset` (negative = motor dropped below the Origin, `0` = inline). This frees the thrust axis to move for down-thrust packaging without disturbing the wing datum.
 1. With the **Point** tool, drop a **thrust-center point** at the motor station. Lock its longitudinal position with a **Coincident** relation to the vertical `x_motor` face (or **Smart Dimension** its Z distance from the Origin `= "x_motor"`). **Do not** pin it to the waterline.
-2. Select **Smart Dimension**, click the **thrust-center point**, then click the horizontal **waterline** ($Y = 0$). Pull the preview into a clean vertical gap, click to place it, and type exactly `= "y_motor_offset"`. *(The signed value drops the point below the waterline automatically — no separate "below" instruction needed; `= 0` runs the thrust line through the wing root.)*
+2. Select **Smart Dimension**, click the **thrust-center point**, then click the horizontal **waterline** ($Y = 0$). Pull the preview into a clean vertical gap, click to place it, and type exactly `= "y_motor_offset"`. *(`y_motor_offset` is a **positive magnitude** — place the dimension on the side of the waterline you want the thrust line to sit; setting the global to zero runs it through the wing root.)*
 3. From the thrust-center point, draw a **construction Line** for the thrust axis running aft. Angular **Smart Dimension** it to the horizontal `= "thrust_down"` (nose-down positive).
 4. This line coincides with `PLN_PropDisk` (§2.6) at the prop station and becomes `AX_Thrust` / `AX_Prop` in §7. Because its anchor is *dimensioned* to the waterline by `y_motor_offset` — not pinned to it — the entire thrust axis rises or drops with that one global.
 > **Decoupling check:** select the thrust-center point and confirm it carries **no** Coincident/Collinear relation to the waterline — only the `y_motor_offset` vertical dimension. If a stray waterline-coincident survives from the §4.3 station array, delete it first; otherwise the sketch over-defines (or silently ignores `y_motor_offset`) the moment you flex the motor height.
@@ -581,7 +591,7 @@ Two more vertices sit **on the centerline** ($X = 0$) as the mirror seam: **`NC`
 | Vertex | Dimension ($Z$ to datum) |
 |---|---|
 | `NL` | `= "x_fuse_nose"` (+Z) |
-| `P1` | `= ("x_fuse_nose" + "x_fuse_firewall") / 2` (+Z) |
+| `P1` | `= "x_fuse_midnose"` (+Z) |
 | `CL` | `= "x_fuse_firewall"` (+Z) |
 | `TL` | `= "x_fuse_bay_aft"` (−Z) |
 | `P2` | `= "x_fuse_midtail"` (−Z) |
@@ -591,9 +601,9 @@ Two more vertices sit **on the centerline** ($X = 0$) as the mirror seam: **`NC`
    > **The same columns as §4.4.** These are the identical expressions that station the side-profile columns (nose, mid-nose, firewall, cabin-rear, mid-tail, tail). Driving both cages from the same `x_fuse_*` globals is what guarantees each §8.5 cross-section plane cuts *both* at a real vertex. *(If you would rather hold a port vertex on its column with a relation than a dimension, a **Vertical** relation between the port vertex and its post-mirror twin keeps them on one $Z$ — but the dimension above is what actually binds the column.)*
 
 **Phase 3 — Dimension the widths.** Smart Dimension each vertex laterally back to the fuselage centerline ($X = 0$) with the parametric width equations:
-1. `NL` (nose flat) → `= "w_fuse" / 4`.
-   > **`EL` (tail cap) is the exception — `= "tail_exit_D" / 2`, not `w_fuse / 4`.** The tail cone terminates at the `tail_exit_D` = 0.75-in bounding, so its half-width shrinks to `tail_exit_D / 2` = 9.525 mm (matching the §4.4 tail-flat half-height). Dimension `EL` to the centerline `= "tail_exit_D" / 2`; leave `NL` at `w_fuse / 4`. **`SL_P` (sleeve end) takes `= "w_fuse_sleeve_half"`** — the same 9.5250 mm, held as its own absolute so the sleeve reads as a constant-width box; with the `EL → SL_P` **Horizontal** relation from Phase 1 step 3 the two agree by construction, and this dimension is what proves it.
-2. `CL` and `TL` (cabin max) → `= "w_fuse" / 2`.
+1. `NL` (nose flat) → `= "w_fuse_nose_half"`.
+   > **`EL` (tail cap) is the exception — `= "w_fuse_tail_half"`, not the nose half-width.** The tail cone terminates at the `tail_exit_D` = 0.75-in bounding, so its half-width shrinks to `tail_exit_D / 2` = 9.525 mm (matching the §4.4 tail-flat half-height). Dimension `EL` to the centerline `= "w_fuse_tail_half"`; leave `NL` at `= "w_fuse_nose_half"`. **`SL_P` (sleeve end) takes `= "w_fuse_sleeve_half"`** — the same 9.5250 mm, held as its own absolute so the sleeve reads as a constant-width box; with the `EL → SL_P` **Horizontal** relation from Phase 1 step 3 the two agree by construction, and this dimension is what proves it.
+2. `CL` (cabin max, fwd) → `= "w_fuse_cabin_fwd_half"`; `TL` (cabin max, aft) → `= "w_fuse_cabin_aft_half"`.
 3. `P1` and `P2` (transition breaks): select each vertex, **Smart Dimension** it laterally to the fuselage centerline, and type exactly `= "w_fuse_break"` (41.25 mm) — one absolute half-width, no fractional split.
 
    > **Absolute width control (`w_fuse_break`).** The transition half-width is now a **direct millimeter global**, not a fraction of `w_fuse` — so you lock an exact internal clearance envelope (structural formers, a battery pack, cargo rails) straight from the global equations dashboard, no trial-and-error scaling. **Envelope check:** keep `w_fuse_break` strictly between the nose/tail flat half-width (`NL` = `w_fuse / 4`) and the cabin half-width (`w_fuse / 2`) for a monotonic taper — a value ≥ `w_fuse / 2` bulges the shoulder *outboard* of the cabin and reverses the taper; a value ≤ `w_fuse / 4` collapses the shoulder into the flat. Because it no longer tracks `w_fuse`, re-check `w_fuse_break` whenever you resize `w_fuse`.
@@ -605,8 +615,8 @@ Two more vertices sit **on the centerline** ($X = 0$) as the mirror seam: **`NC`
 4. Confirm the whole fuselage footprint reads **Fully Defined** — every segment **solid black**. A blue vertex means a missing $Z$ or $X$ dimension (Phases 2–3), or a flat face missing its **Vertical** relation; add the missing constraint, not a stray one.
 
 **5.4 — Map the reference spar and joiner lines.**
-1. **Main spar centerline.** Select the **Line** tool and check **For construction**. Click directly on your solid root chord line, drag outboard, and click on your solid tip chord line. **Smart Dimension** the inboard endpoint to the Origin along $Z$ `= "x_spar_root"`; dimension the outboard endpoint to the tip LE point along $Z$ `= "spar_main_pct" * "c_tip"`.
-2. **Rear spar centerline.** Draw another construction line outboard from root to tip behind the main spar. Dimension its inboard endpoint to the Origin along $Z$ `= "x_rspar_root"`; dimension its outboard endpoint to the tip LE along $Z$ `= "spar_rear_pct" * "c_tip"`.
+1. **Main spar centerline.** Select the **Line** tool and check **For construction**. Click directly on your solid root chord line, drag outboard, and click on your solid tip chord line. **Smart Dimension** the inboard endpoint to the Origin along $Z$ `= "x_spar_root"`; dimension the outboard endpoint to the tip LE point along $Z$ `= "x_spar_tip"`.
+2. **Rear spar centerline.** Draw another construction line outboard from root to tip behind the main spar. Dimension its inboard endpoint to the Origin along $Z$ `= "x_rspar_root"`; dimension its outboard endpoint to the tip LE along $Z$ `= "x_rspar_tip"`.
 3. **Wing joiner axis line.** Draw a construction line starting directly on your vertical fuselage centerline ($X = 0$), running horizontally outboard. Give it a **Horizontal** relation to keep it square, and **Smart Dimension** its axial distance from the Origin along $Z$ to exactly `= "x_joiner_root"`.
 
 **5.5 — Array the rib stations.**
@@ -632,12 +642,12 @@ Two more vertices sit **on the centerline** ($X = 0$) as the mirror seam: **`NC`
 
 **5.8 — Map out the empennage planforms.**
 1. **Horizontal tail (HT).** Select the solid **Line** tool. Click on the fuselage centerline far aft of your wing to sketch the root chord line. Lock it **Collinear** to the centerline, dimension its length to `= "c_root_HT"`, and dimension its leading-edge point back to the master **Origin** to `= "x_HT_LE_root"`.
-2. Drop a floating point out to the side and dimension its horizontal span distance to the centerline to `= "b_HT" / 2`. Connect the HT leading edge from the centerline root to this tip point, adding a **Horizontal** relation for a straight tail. Draw the tip chord line running aft, make it **Parallel** to the centerline, and dimension its length to `= "c_tip_HT"`. Close the loop back to the root trailing edge.
+2. Drop a floating point out to the side and dimension its horizontal span distance to the centerline to `= "b_semi_HT"`. Connect the HT leading edge from the centerline root to this tip point, adding a **Horizontal** relation for a straight tail. Draw the tip chord line running aft, make it **Parallel** to the centerline, and dimension its length to `= "c_tip_HT"`. Close the loop back to the root trailing edge.
 3. **Vertical tail (VT).** Select the **Centerline** tool. Draw a line directly on the main fuselage centerline near the tail apex. Ensure it is **Collinear**, dimension its length to `= "c_root_VT"`, and dimension its forward endpoint back to the master **Origin** to `= "x_VT_LE_root"`.
 
 **5.8.1 — Reference spar line for the horizontal tail (port).** The HT loft (§8.6) needs a true spanwise datum, exactly as the wing loft rides `AX_MainSpar_3D`. Lay its 2-D seed here, mirroring the §5.4 wing-spar recipe on the horizontal-tail planform you just drew.
 1. Select the **Line** tool and check **For construction**. Click on your HT **root chord line**, drag outboard, and click on your HT **tip chord line**. Press **`Esc`**.
-2. **Smart Dimension** the inboard endpoint to the HT root **leading-edge** point along $Z$ to `= "spar_main_pct" * "c_root_HT"`; dimension the outboard endpoint to the HT tip **leading-edge** point along $Z$ to `= "spar_main_pct" * "c_tip_HT"`.
+2. **Smart Dimension** the inboard endpoint to the HT root **leading-edge** point along $Z$ to `= "x_spar_root_HT"`; dimension the outboard endpoint to the HT tip **leading-edge** point along $Z$ to `= "x_spar_tip_HT"`.
    > **Why `spar_main_pct` (no dedicated tail-spar global).** The stabilizer spar is co-located at the **same %-chord fraction** as the wing main spar, so it re-uses an existing global with zero new entries — Appendix A stays byte-identical. The elevator hinge lives further aft at `(1 - "c_elev_pct")` of chord, so a 25 % spar clears the `c_elev_pct` = 0.35 elevator cleanly. If structures wants the tail spar elsewhere, add a dedicated `spar_HT_pct` global and swap both dimensions to it — the revert path is these two lines only.
 3. Leave this line **port-only** — do **not** mirror it. Like `AX_MainSpar`, the axis rides the single port line; §5.9's mirror touches only the HT *outline*, never this spar.
 
@@ -648,8 +658,8 @@ Two more vertices sit **on the centerline** ($X = 0$) as the mirror seam: **`NC`
   > At `dihedral_HT` = 0 the plane is coincident with the Top Plane — correct for the flat starter HT. Every point on it obeys $Y = X\tan(dihedral\_HT)$, so the spar drawn below inherits any future HT dihedral with no hard $Y$ number.
 * **Phase B — draw the HT spar (`LAY_HTspar_Dihedral`).**
   1. **Insert ▸ Sketch** on `PLN_Dihedral_HT`; **F2** → `LAY_HTspar_Dihedral`. Press **`L`**, tick **For construction**, draw a rough line from the HT root outboard to the port ($+X$) tip.
-  2. **Root end —** **Coincident** to `AX_Long` (pins $X = 0$), then **Smart Dimension** its $Z$ to the **Front Plane** `= "x_HT_LE_root" + "spar_main_pct" * "c_root_HT"` on the aft ($-Z$) side.
-  3. **Tip end —** spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "b_semi_HT" / cos("dihedral_HT" * pi/180)` — the same tilted-sketch projection rule as the wing spar (§7.2), so at any `dihedral_HT` the tip still lands at the projected $X = $ `b_HT`$/2$. Distance to the **Front Plane** `= "x_HT_LE_root" + "b_semi_HT" * tan("sweep_HT" * pi/180) + "spar_main_pct" * "c_tip_HT"` on the aft ($-Z$) side. The plane supplies $Y$.
+  2. **Root end —** **Coincident** to `AX_Long` (pins $X = 0$), then **Smart Dimension** its $Z$ to the **Front Plane** `= "x_HT_spar_root"` on the aft ($-Z$) side.
+  3. **Tip end —** spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "b_semi_HT_proj"` — the same tilted-sketch projection rule as the wing spar (§7.2), so at any `dihedral_HT` the tip still lands at the projected $X = $ `b_HT`$/2$. Distance to the **Front Plane** `= "x_HT_spar_tip"` on the aft ($-Z$) side. The plane supplies $Y$.
   4. Confirm `LAY_HTspar_Dihedral` reads **fully black**; **Exit** the sketch.
 * **Phase C — promote to `AX_HTspar_3D`.**
   1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the `LAY_HTspar_Dihedral` line, green-check, **F2** → `AX_HTspar_3D`. File it in `4_AXES` (§7.2) and the sketch in `2_LAYOUT_SKETCHES`.
@@ -725,7 +735,7 @@ Anchors (symmetric about $X = 0$): floor at $Y = -(\,$`h_fuse` $-$ `h_fuse_top`$
 * **Phase 1: Establish the framework.**
   1. On the **Front Plane**, open a sketch and press **`Ctrl + 8`**. Draw a horizontal **floor line** below the Origin and a **vertical centerline** on $X = 0$.
   2. Add **Horizontal** to the floor and **Coincident** of its midpoint to the centerline.
-  3. **Smart Dimension** the floor line to the **waterline** ($Y = 0$) → `= "h_fuse" - "h_fuse_top"`. **Do not dimension the floor width directly** — its endpoints are pinned in Phase 4 relative to the flare, so its width floats with the cage.
+  3. **Smart Dimension** the floor line to the **waterline** ($Y = 0$) → `= "h_fuse_bottom"`. **Do not dimension the floor width directly** — its endpoints are pinned in Phase 4 relative to the flare, so its width floats with the cage.
 
 * **Phase 2: Generate the Style Spline.**
   1. **Tools ▸ Sketch Entities ▸ Style Spline** (**B-Spline** mode).
@@ -739,10 +749,10 @@ Anchors (symmetric about $X = 0$): floor at $Y = -(\,$`h_fuse` $-$ `h_fuse_top`$
 
 * **Phase 4: Parametric scaling (link the cage to globals).**
   1. **Apex height:** dimension the apex vertex to the waterline → `= "h_fuse_top"`.
-  2. **Max flare width:** draw a **vertical construction line** offset from the centerline, **Smart Dimension** it → `= "w_fuse" / 2`, and make the **outermost (flare) control vertex** on each side **Coincident** to it. This pins the bulbous maximum to the envelope.
-  3. **Flare height:** dimension each flare vertex to the **floor** → `= "crown_sh_pct" * "h_fuse"`, lifting the widest point off the floor for the pebble bulge.
-  4. **Floor-contact width:** dimension each floor endpoint to the centerline → `= "w_floor_pct" * "w_fuse" / 2`. Because `w_floor_pct` < 1 the floor stays **inboard** of the flare, so the spline must bow outward to reach `w_fuse`/2 — that outward bow *is* the flare. (At the defaults: floor half-width 50.6 mm vs a 55 mm flare.)
-  5. **Apex flat width:** dimension each crown vertex to the centerline → `= "crown_apex_pct" * "w_fuse" / 2`, and to the waterline → `= "h_fuse_top"` (level with the apex so the Horizontal apex relation holds).
+  2. **Max flare width:** draw a **vertical construction line** offset from the centerline, **Smart Dimension** it → `= "w_fuse_half"`, and make the **outermost (flare) control vertex** on each side **Coincident** to it. This pins the bulbous maximum to the envelope.
+  3. **Flare height:** dimension each flare vertex to the **floor** → `= "h_crown_flare"`, lifting the widest point off the floor for the pebble bulge.
+  4. **Floor-contact width:** dimension each floor endpoint to the centerline → `= "w_fuse_floor_half"`. Because `w_floor_pct` < 1 the floor stays **inboard** of the flare, so the spline must bow outward to reach `w_fuse`/2 — that outward bow *is* the flare. (At the defaults: floor half-width 50.6 mm vs a 55 mm flare.)
+  5. **Apex flat width:** dimension each crown vertex to the centerline → `= "w_crown_apex_half"`, and to the waterline → `= "h_fuse_top"` (level with the apex so the Horizontal apex relation holds).
 
 * **Phase 5: Verify.** Status bar **Fully Defined**; spline, control polygon, and every vertex **black**. If blue: a missing **Symmetric** (section drifts off-center), a missing **Tangent/Horizontal** boundary relation (the crease or the peak returns), or an unlinked cage dimension. Relation first, then dimension.
 
@@ -757,7 +767,7 @@ Anchors (symmetric about $X = 0$): floor at $Y = -(\,$`h_fuse` $-$ `h_fuse_top`$
 **Step-by-step execution.**
 * **Phase 1: Pin the decoupled thrust center and draw the propeller blade arc (`D_prop`)**
   1. On the **Sketch** tab, select the **Point** tool. Drop a point on the **vertical centerline** ($X = 0$) below the Origin — landing on the line adds a **Coincident** relation that locks $X = 0$. Press **`Esc`**.
-  2. Select **Smart Dimension**, click this center point, then click the horizontal **waterline** ($Y = 0$). Pull the preview into a clean vertical gap and **click once** to place it. In the **Modify** box, type exactly `= "y_motor_offset"` and press **Enter**. *(The signed value drops the center below the waterline automatically; `= 0` runs it through the Origin.)* This is the shared prop/thrust center — **do not** give it a Coincident relation to the waterline.
+  2. Select **Smart Dimension**, click this center point, then click the horizontal **waterline** ($Y = 0$). Pull the preview into a clean vertical gap and **click once** to place it. In the **Modify** box, type exactly `= "y_motor_offset"` and press **Enter**. *(`y_motor_offset` is a **positive magnitude** — place the dimension on the side you want; setting the global to zero runs it through the Origin. Use the **same side** here as in §4.5 or the two views will disagree.)* This is the shared prop/thrust center — **do not** give it a Coincident relation to the waterline.
   3. Select the **Circle** tool (or press the **`S`** shortcut and pick the circle icon). Hover over the black center point until the yellow **Coincident** glyph appears and **click once** to anchor the circle's center on it.
   4. Drag your cursor outward diagonally to expand the circle, and **click a second time** to drop it. Press **`Esc`** to release the tool.
   5. Click the **Smart Dimension** tool, click the circle perimeter, drag into clear space, and **click once** to place the box. Type exactly `= "D_prop"` and press **Enter**.
@@ -770,7 +780,7 @@ Anchors (symmetric about $X = 0$): floor at $Y = -(\,$`h_fuse` $-$ `h_fuse_top`$
   5. Under the **Options** section, check the box for **For construction**. Click the green checkmark. *(The solid line converts into a dashed reference circle.)*
   6. Click the **Smart Dimension** tool.
   7. Click the dashed perimeter of this outer keep-out circle, drag the cursor out, and **click once** to place the box.
-  8. SolidWorks defaults to driving a full circle by its **diameter**. Because the safety rule specifies a 9-inch (228.6 mm) **radius** buffer *beyond* the blade tips, the total diameter equation must account for both sides of the circle. In the **Modify** box, type exactly `= "D_prop" + (2 * "keepout")` and press **Enter**.
+  8. SolidWorks defaults to driving a full circle by its **diameter**. Because the safety rule specifies a 9-inch (228.6 mm) **radius** buffer *beyond* the blade tips, the total diameter equation must account for both sides of the circle. In the **Modify** box, type exactly `= "D_keepout"` and press **Enter**.
 
 **Verification & compliance audit.**
 - **Status check:** Look at the bottom-right corner of the SolidWorks window. The status bar must read **Fully Defined**, and both circles, along with their shared center point, must be entirely **black**.
@@ -811,7 +821,7 @@ This section connects your aircraft's flight components (wing root, fuselage, an
     3. Click the **Smart Dimension** tool.
     4. Click the **newly placed point**, then click your master **vertical centerline** ($X = 0$).
     5. Pull the dimension down toward the bottom of the screen to create a flat horizontal measurement.
-    6. Click to place it, type `= "track" / 2`, and press **Enter**.
+    6. Click to place it, type `= "track_half"`, and press **Enter**.
 * **Phase 4: Draw the main wheel profile**
   1. On the Sketch tab, click the arrow next to the **Rectangle** tool and select **Center Rectangle**.
   2. Move your cursor directly over the half-track point you created in Phase 3. When the orange point highlight appears, **click once** to anchor the center of the rectangle.
@@ -855,8 +865,8 @@ The vertical stabilizer (the fin) projects straight up from the top spine of the
   > At `dihedral_VT` = 0 the plane is coincident with the **Right Plane** — the normal single-fin case. A non-zero `dihedral_VT` cants the fin about the fore-aft centerline; if you need cant hinged at the fin base instead, root the pivot there rather than on `AX_Long`.
 * **Phase B — draw the fin spar (`LAY_VTspar_Dihedral`).**
   1. **Insert ▸ Sketch** on `PLN_Dihedral_VT`; **F2** → `LAY_VTspar_Dihedral`. Press **`L`**, tick **For construction**, draw a rough line climbing up-and-aft.
-  2. **Root end (fin base) —** **Smart Dimension** its height **from the Origin** (in-plane, along the plane's vertical) `= "h_tail_top" / cos("dihedral_VT" * pi/180)` — same projection rule as the wing spar (§7.2), landing the base at the true $Y = $ `h_tail_top` at any cant. To the **Front Plane** `= "x_VT_LE_root" + "spar_main_pct" * "c_root_VT"` on the aft ($-Z$) side.
-  3. **Tip end (fin top) —** height **from the Origin** `= ("h_tail_top" + "b_VT") / cos("dihedral_VT" * pi/180)` (projecting to $Y = $ `h_tail_top` $+$ `b_VT`), and to the **Front Plane** `= "x_VT_LE_root" + "spar_main_pct" * "c_root_VT" + "b_VT" * tan("sweep_VT" * pi/180)` on the aft ($-Z$) side.
+  2. **Root end (fin base) —** **Smart Dimension** its height **from the Origin** (in-plane, along the plane's vertical) `= "h_VT_root_proj"` — same projection rule as the wing spar (§7.2), landing the base at the true $Y = $ `h_tail_top` at any cant. To the **Front Plane** `= "x_VT_spar_root"` on the aft ($-Z$) side.
+  3. **Tip end (fin top) —** height **from the Origin** `= "h_VT_tip_proj"` (projecting to $Y = $ `h_tail_top` $+$ `b_VT`), and to the **Front Plane** `= "x_VT_spar_tip"` on the aft ($-Z$) side.
   > **The tip $Z$ term is the sweep rake.** `b_VT * tan(sweep_VT)` is how far the swept spar walks aft over the full fin height — the vertical analog of the wing's spanwise sweep offset. Store `sweep_VT` in degrees; `* pi/180` converts inside the expression (§14 item 5).
   4. Confirm `LAY_VTspar_Dihedral` reads **fully black**; rotate to isometric and verify it climbs in $+Y$ while raking aft in $-Z$. **Exit**.
      > **Fin-root seat (flag).** `h_tail_top` seats the fin on the aft crown. If the fin should root further forward on the spine — where the hull is taller — swap both `h_tail_top` references to `h_fuse_top` or a dedicated `y_VT_root` global; the §8.6 transform's base-height cell `K1` must match whatever you pick. Revert path: these two $Y$-dimensions plus cell `K1`.
@@ -1032,9 +1042,9 @@ This converts the layout sketches into the named, top-level references that down
   2. Press **`L`**, tick **For construction**, and draw a rough line from the wing root outboard toward the port (**+X**) tip.
   3. **Root end —** add a **Coincident** to `AX_Long` (pins the root at $X = 0$, $Y = 0$), then **Smart Dimension** its $Z$ to the **Front Plane** `= "x_spar_root"` on the aft ($-Z$) side.
   4. **Outboard end —** pin the projected footprint with two dimensions to the orthogonal datums and let the plane supply $Y$:
-     - **Smart Dimension** the endpoint's spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "b_semi" / cos("dihedral" * pi/180)`. You cannot dimension to the **Right Plane** here — it is not perpendicular to the tilted `PLN_Dihedral`, so SolidWorks offers no clean point-to-plane dimension; the in-plane distance from the Origin does, and the `/ cos(dihedral)` factor makes the slant length project back to the exact projected semi-span $X = b\_semi$.
-     - **Smart Dimension** its distance to the **Front Plane** `= "b_semi" * tan("sweep_LE" * pi/180) + "spar_main_pct" * "c_tip"` on the aft ($-Z$) side → sets chordwise $Z$ (LE sweep carried to the tip, plus the spar fraction of the tip chord).
-  > **Why the `/ cos(dihedral)` factor.** `PLN_Dihedral` is tilted about `AX_Long`, so its normal is $(-\sin\Gamma,\,\cos\Gamma,\,0)$ (with $\Gamma =$ `dihedral`) — not parallel to $X$ — so the **Right Plane is not perpendicular to the sketch** and offers no clean spanwise point-to-plane dimension; you dimension **in-plane from the Origin** instead. That in-plane length is the **slant** span, and a slant $s$ projects to $X = s\cos(dihedral)$. Setting it to `= "b_semi" / cos("dihedral" * pi/180)` therefore lands the tip at the exact projected semi-span $X = b\_semi$, so the tilted spar keeps one projected footprint with the flat `LAY_Wing_Plan`, while the plane's tilt supplies $Y = b\_semi\tan(dihedral)$. (The **Front-Plane** chord dimension below is unaffected — the Front Plane *is* perpendicular to `PLN_Dihedral`.)
+     - **Smart Dimension** the endpoint's spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "b_semi_proj"`. You cannot dimension to the **Right Plane** here — it is not perpendicular to the tilted `PLN_Dihedral`, so SolidWorks offers no clean point-to-plane dimension; the in-plane distance from the Origin does, and the `/ cos(dihedral)` factor makes the slant length project back to the exact projected semi-span $X = b\_semi$.
+     - **Smart Dimension** its distance to the **Front Plane** `= "x_spar_tip_swept"` on the aft ($-Z$) side → sets chordwise $Z$ (LE sweep carried to the tip, plus the spar fraction of the tip chord).
+  > **Why the `/ cos(dihedral)` factor.** `PLN_Dihedral` is tilted about `AX_Long`, so its normal is $(-\sin\Gamma,\,\cos\Gamma,\,0)$ (with $\Gamma =$ `dihedral`) — not parallel to $X$ — so the **Right Plane is not perpendicular to the sketch** and offers no clean spanwise point-to-plane dimension; you dimension **in-plane from the Origin** instead. That in-plane length is the **slant** span, and a slant $s$ projects to $X = s\cos(dihedral)$. Setting it to `= "b_semi_proj"` therefore lands the tip at the exact projected semi-span $X = b\_semi$, so the tilted spar keeps one projected footprint with the flat `LAY_Wing_Plan`, while the plane's tilt supplies $Y = b\_semi\tan(dihedral)$. (The **Front-Plane** chord dimension below is unaffected — the Front Plane *is* perpendicular to `PLN_Dihedral`.)
   5. **Physical rib-root seed point (base reference for Route A).** Select the **Point** tool, click **on** the spar line to drop a coincident point, then **Smart Dimension** from the line's **root endpoint** to the **seed point** — both lie on the line, so the value reads the **true along-spar length**, not an $X$-projection. Type `= "rib_root_off_physical"` ▸ green check.
   > **Success state:** `LAY_MainSpar_Dihedral` turns **fully black**; rotate to isometric and the line climbs in **+Y** as it runs outboard in **+X**, raking in **Z** with the plan sweep. Exit the sketch.
 
@@ -1110,7 +1120,7 @@ This converts the layout sketches into the named, top-level references that down
   2. Hover back over the black center point, catching the **Coincident** glyph to ensure perfect concentricity. Left-click once to start, drag outward until this circle is clearly larger than the first, and left-click a second time to place it. Press **`Esc`**.
   3. Click once on the outer circle line; in the **PropertyManager** under **Options**, check **For construction**, then click the **Green Checkmark** ($\checkmark$).
   4. Select the **Smart Dimension** tool, click the dashed outer circle, drag clear of the geometry, and click to place the box.
-  5. Because SolidWorks drives a full circle by its **diameter**, the 9-inch **radius** buffer beyond the blade tips must be applied to both sides. In the **Modify** box, type this exact string: `= "D_prop" + (2 * "keepout")`.
+  5. Because SolidWorks drives a full circle by its **diameter**, the 9-inch **radius** buffer beyond the blade tips must be applied to both sides. In the **Modify** box, type this exact string: `= "D_keepout"`.
   6. Press **Enter**.
 
 * **Step 5: Exit, rename, and audit in 3D space.**
@@ -1134,7 +1144,7 @@ This converts the layout sketches into the named, top-level references that down
 | Station global | Plane name | Offset [mm] | Side (Flip target) |
 |---|---|---|---|
 | `= "x_fuse_nose"` | `PLN_Fuse_Nose` | 304.80 | **+Z** forward |
-| `= ("x_fuse_nose" + "x_fuse_firewall") / 2` | `PLN_Fuse_MidNose` | 228.60 | **+Z** forward |
+| `= "x_fuse_midnose"` | `PLN_Fuse_MidNose` | 228.60 | **+Z** forward |
 | `= "x_fuse_firewall"` | `PLN_Fuse_Firewall` | 152.40 | **+Z** forward |
 | `= "x_fuse_bay_fwd"` | `PLN_Fuse_Bay_Fwd` | 50.00 | **+Z** forward |
 | `= "x_fuse_bay_aft"` | `PLN_Fuse_Bay_Aft` | 101.60 | **−Z** aft |
@@ -1143,7 +1153,7 @@ This converts the layout sketches into the named, top-level references that down
 
 > **Watch the two 152.40 mm planes — they flip *opposite* ways.** `PLN_Fuse_Firewall` and `PLN_Fuse_Tail` carry the **same** offset magnitude but sit on **opposite** sides of the Origin: the firewall **forward** (+Z), the tail cap **aft** (−Z). They take opposite Flip states. Sanity-check the result: the firewall plane appears ahead of the wing LE, the tail plane behind it, exactly `cabin_len` + `x_fuse_tail` − `x_fuse_bay_aft` = 304.80 mm apart.
 
-> **The two mid-station planes ride dedicated globals.** `PLN_Fuse_MidNose` and `PLN_Fuse_MidTail` are offset by `= "x_fuse_midnose"` (228.60, $+Z$) and `= "x_fuse_midtail"` (152.40, $-Z$) — absolute stations in `skeleton_equations_micro.txt` that also anchor the side-profile `M`-breaks (§3) and the planform `P`-breaks (§5.3.5). Link each **Offset Distance** to its global rather than typing a raw expression, so all three subsystems track one station.
+> **The two mid-station planes ride dedicated globals.** `PLN_Fuse_MidNose` and `PLN_Fuse_MidTail` are offset by `= "x_fuse_midnose"` and `= "x_fuse_midtail"` — absolute stations in `skeleton_equations_micro.txt` that also anchor the side-profile `M`-breaks (§3) and the planform `P`-breaks (§5.3.5). Link each **Offset Distance** to its global rather than typing a raw expression, so all three subsystems track one station.
 
 * **Housekeeping — dedicated folder.**
   1. In the FeatureManager tree, **`Ctrl`-click** all seven `PLN_Fuse_*` planes.
@@ -1171,7 +1181,7 @@ This converts the layout sketches into the named, top-level references that down
 **7.3.8 — Vertical-tail section planes (the vertical-axis coordinate shift).** The fin is the coordinate-shift case: its **span runs up $+Y$**, so its section planes are **horizontal** (parallel to the Top Plane), stacked in $+Y$ and bounded by the fin height `= "b_VT"` — *not* lateral offsets like the wing/HT. Two builds; pick per how square you need the airfoils to the swept spar.
 * **Method 1 — horizontal offsets from the Top Plane (simple; sections square to $+Y$).**
   1. **Insert ▸ Reference Geometry ▸ Plane**, **First Reference** = **Top Plane**, **Offset Distance** `= "h_tail_top"`, and **Flip** so it previews **up** ($+Y$) onto the crown seat. Green-check; rename `PLN_VT_Root`.
-  2. Repeat with **Offset Distance** `= "h_tail_top" + "b_VT"` for the fin top. Rename `PLN_VT_Tip`.
+  2. Repeat with **Offset Distance** `= "h_VT_tip"` for the fin top. Rename `PLN_VT_Tip`.
      > Sections built on these horizontal planes stay horizontal; the chord still rakes aft between them because the *airfoil $Z$-station* rides `sweep_VT` in the §8.6 transform. This is the standard fin build and it matches how the Excel streams place the root and tip sections.
 * **Method 2 — Normal-to-Curve on `AX_VTspar_3D` (rigorous; sections square to the raked spar).**
   1. **Insert ▸ Reference Geometry ▸ Plane**, **First Reference** = `AX_VTspar_3D` → **Normal to Curve**, **Second Reference** = the fin-spar **root** endpoint. Rename `PLN_VT_Root`.
@@ -1268,12 +1278,12 @@ These give downstream parts clean origins to mate to and a consistent frame for 
 * **Step 1 — draw the hinge lines on `PLN_Dihedral` (`LAY_Hinge_Lines_Dihedral`).**
   1. Click **Insert ▸ Sketch** and pick `PLN_Dihedral` as the sketch plane; **F2** → `LAY_Hinge_Lines_Dihedral`.
   2. Press **`L`**, tick **For construction**, and draw a rough aileron hinge line from the inboard to the outboard aileron region.
-  3. **Inboard end —** **Smart Dimension** its spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "y_ail_in" / cos("dihedral" * pi/180)` — the tilted `PLN_Dihedral` has no clean dimension to the Right Plane, so the in-plane distance with the `/ cos(dihedral)` factor lands the projected span at exactly $X = y\_ail\_in$. Its distance to the **Front Plane** `= "y_ail_in" * tan("sweep_LE" * pi/180) + (1 - "c_ail_pct") * ("c_root" - ("c_root" - "c_tip") * "ail_in_pct")` on the aft ($-Z$) side (chordwise $Z$) is unaffected. The plane sets $Y = y\_ail\_in\tan(dihedral)$ for free.
-  4. **Outboard end —** spanwise distance **from the Origin** `= "y_ail_out" / cos("dihedral" * pi/180)` (in-plane, projecting to $X = y\_ail\_out$); distance to the **Front Plane** `= "y_ail_out" * tan("sweep_LE" * pi/180) + (1 - "c_ail_pct") * ("c_root" - ("c_root" - "c_tip") * "ail_out_pct")` on the aft ($-Z$) side.
+  3. **Inboard end —** **Smart Dimension** its spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "y_ail_in_proj"` — the tilted `PLN_Dihedral` has no clean dimension to the Right Plane, so the in-plane distance with the `/ cos(dihedral)` factor lands the projected span at exactly $X = y\_ail\_in$. Its distance to the **Front Plane** `= "x_hinge_ail_in"` on the aft ($-Z$) side (chordwise $Z$) is unaffected. The plane sets $Y = y\_ail\_in\tan(dihedral)$ for free.
+  4. **Outboard end —** spanwise distance **from the Origin** `= "y_ail_out_proj"` (in-plane, projecting to $X = y\_ail\_out$); distance to the **Front Plane** `= "x_hinge_ail_out"` on the aft ($-Z$) side.
   > **The chord term, unpacked.** `(1 - "c_ail_pct")` is the 75 %-chord hinge fraction; `("c_root" - ("c_root" - "c_tip") * "ail_*_pct")` is the local chord at that spanwise station under linear taper; the `tan("sweep_LE" * pi/180)` term walks the hinge aft with LE sweep. Together they place each end at the true 75 %-chord point — the value the flat plan would give, now carried straight onto the dihedral plane with no plan-point pierce.
   5. **Flap hinge, draw —** in the *same* sketch press **`L`** again, tick **For construction**, and draw a second rough line inboard of the aileron, running from the inboard to the outboard flap region.
-  6. **Flap inboard end —** **Smart Dimension** its spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "y_flap_in" / cos("dihedral" * pi/180)` — same tilted-sketch rule as the aileron, projecting to exactly $X = y\_flap\_in$. Its distance to the **Front Plane** `= "y_flap_in" * tan("sweep_LE" * pi/180) + (1 - "c_flap_pct") * ("c_root" - ("c_root" - "c_tip") * "flap_in_pct")` on the aft ($-Z$) side (chordwise $Z$). The plane sets $Y = y\_flap\_in\tan(dihedral)$ for free.
-  7. **Flap outboard end —** spanwise distance **from the Origin** `= "y_flap_out" / cos("dihedral" * pi/180)` (in-plane, projecting to $X = y\_flap\_out$); distance to the **Front Plane** `= "y_flap_out" * tan("sweep_LE" * pi/180) + (1 - "c_flap_pct") * ("c_root" - ("c_root" - "c_tip") * "flap_out_pct")` on the aft ($-Z$) side.
+  6. **Flap inboard end —** **Smart Dimension** its spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "y_flap_in_proj"` — same tilted-sketch rule as the aileron, projecting to exactly $X = y\_flap\_in$. Its distance to the **Front Plane** `= "x_hinge_flap_in"` on the aft ($-Z$) side (chordwise $Z$). The plane sets $Y = y\_flap\_in\tan(dihedral)$ for free.
+  7. **Flap outboard end —** spanwise distance **from the Origin** `= "y_flap_out_proj"` (in-plane, projecting to $X = y\_flap\_out$); distance to the **Front Plane** `= "x_hinge_flap_out"` on the aft ($-Z$) side.
   > **The flap hinge is *not* collinear with the aileron hinge.** `(1 - "c_flap_pct")` = 0.70 puts the flap on the **70 %** chord line, 5 % of local chord **forward** of the aileron's 75 %. Because `flap_out_pct` = `ail_in_pct` = 0.55 the two surfaces abut at $X = 302.5$ mm with no spanwise gap, where the local chord is 234 mm — so expect a **≈ 11.7 mm chordwise step** between the two hinge lines at that junction. That step is the flap/aileron seam, not a modelling error; the downstream rib split (Phase 4) cuts to whichever line its station falls under.
   8. Confirm both hinge lines read **fully black** (fully defined), then **Exit** the sketch.
   > **Washout-exact refinement (optional).** `PLN_Dihedral` captures dihedral but not the `twist_tip` rotation of the outboard section. For a hinge that also follows washout, instead **Pierce** each endpoint to the intersection of the local aileron rib station and `SURF_Wing_OML` at 75 % chord (needs the §8.4 surface). Use this only if aileron-gap tolerance is tight; the on-plane build is the standard path.
@@ -1314,9 +1324,9 @@ These give downstream parts clean origins to mate to and a consistent frame for 
 1. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Wing_Plan` ▸ **Edit Sketch** (**`Ctrl + 8`**). You will dimension all three points along the fuselage centerline ($X = 0$), aft distance from the Origin along $Z$ — the same convention as the §5.6 CG band.
 2. **Loaded CG (`PT_CG_loaded`).** Drop a **Point** on the centerline; **Smart Dimension** its $Z$ from the Origin → `= "x_CG"` (the full-water design target; this coincides with the existing `PT_CG_target`, §7.1 — reuse that point instead if you prefer a single loaded marker).
 3. **Drained CG (`PT_CG_drained`).** Drop a second centerline point; **Smart Dimension** its $Z$ → the moment balance after the water leaves (container stays aboard):
-   `= ("W_TO" * "x_CG" - "W_water" * "x_bay") / ("W_empty" + "W_container")`
+   `= "x_CG_drained"`
 4. **Empty CG (`PT_CG_empty`).** Drop a third centerline point; **Smart Dimension** its $Z$ → the dry-structure balance (water **and** container removed):
-   `= ("W_TO" * "x_CG" - ("W_water" + "W_container") * "x_bay") / "W_empty"`
+   `= "x_CG_empty"`
    > **The moment balance.** Removing a mass $m$ sitting at `x_bay` from a total $W_{TO}$ at `x_CG` moves the CG to $(W_{TO}\,x_{CG} - m\,x_{bay})/(W_{TO}-m)$. Drained subtracts `W_water`; empty subtracts `W_water + W_container`. This assumes **both** the water and the container centroid at `x_bay`. If your empty container drops *with* the water, `PT_CG_drained` and `PT_CG_empty` coincide — delete one; if the container centroid differs from the bay centre, swap `x_bay` for that station in the empty expression. Every term is an existing global, so nothing is added to the equations file.
 5. Exit the sketch. **Promote all three** to reference points: **Insert ▸ Reference Geometry ▸ Point** on each vertex, rename `PT_CG_loaded`, `PT_CG_drained`, `PT_CG_empty`, and drag them into **`5_POINTS`** beside `PT_CG_target` / `PT_CG_fwd` / `PT_CG_aft`.
    > **They move on their own.** Because each station is an *expression* of `W_water` / `W_TO` / `x_CG` (and friends), flexing the payload — or switching a §11 configuration that recomputes `W_water` — re-solves all three markers instantly. No manual re-dimensioning, no per-config edits.
@@ -1346,9 +1356,9 @@ These give downstream parts clean origins to mate to and a consistent frame for 
   2. Watch the preview: if it drops below the waterline, tick **Flip** so it offsets **up ($+Y$)** onto the deck. Green-check, **F2** → `PLN_Wing_Seat_H`.
      > This is the fuselage structural deck the wing beams land on. Because it rides `h_wing_seat`, raising or lowering the deck re-seats the whole mount stack with no rework.
 * **Vertical shear-tie planes (`PLN_Wing_Seat_V_Port` / `_Starboard`).**
-  1. **Insert ▸ Reference Geometry ▸ Plane**; **First Reference** = the default **Right Plane**; **Offset Distance** `= "w_wing_seat" / 2` (= 45 mm).
+  1. **Insert ▸ Reference Geometry ▸ Plane**; **First Reference** = the default **Right Plane**; **Offset Distance** `= "w_wing_seat_half"` (= 45 mm).
   2. **Flip** so it previews to **port ($+X$)**. Green-check, **F2** → `PLN_Wing_Seat_V_Port`.
-  3. Repeat with the same `= "w_wing_seat" / 2` offset, **Flip**ped to **starboard ($-X$)**. Rename `PLN_Wing_Seat_V_Starboard`.
+  3. Repeat with the same `= "w_wing_seat_half"` offset, **Flip**ped to **starboard ($-X$)**. Rename `PLN_Wing_Seat_V_Starboard`.
      > These are the inner mounting faces for the aluminum shear ties / carbon structural angles — the Right-Plane mirror of each other, `w_wing_seat` apart. Resize the tie spacing in one global and both faces track.
 * **Interface alignment sketch (`LAY_Wing_Mounts`).**
   0. **Prerequisite — a rear-spar axis.** `AX_MainSpar` already exists (§7.2), but the **rear** spar is only a construction line so far (§5). Promote it now: **Insert ▸ Reference Geometry ▸ Axis** ▸ **One Line/Edge/Axis** ▸ click the rear-spar construction line ▸ **F2** → `AX_Rspar`; drop it in `4_AXES`. *(Skip if you already built it, or pierce the rear-spar line directly in step 3.)*
@@ -1537,7 +1547,7 @@ Drag all three formulas down to the final row of coordinate data. The transform 
 3. Paste your imported airfoil spline contour into the canvas (**`Ctrl + V`**).
 4. Select the **Centerline** tool. Click the airfoil's front **leading-edge vertex**, drag straight aft horizontally, and click the sharp **trailing-edge point**. Press **`Esc`** to establish your tip **chord line**.
 5. Select the **Centerline** tool again. Click the airfoil's **leading-edge vertex**, drag straight aft horizontally to drop a reference line, and press **`Esc`**. Verify this line holds a **Horizontal** relation.
-6. Select the **Smart Dimension** tool. Click your tip **chord line**, click the flat horizontal reference line, pull clear, click to place, type `= "i_wing" + "twist_tip"`, and press **`Enter`** to lock aerodynamic washout.
+6. Select the **Smart Dimension** tool. Click your tip **chord line**, click the flat horizontal reference line, pull clear, click to place, type `= "i_tip"`, and press **`Enter`** to lock aerodynamic washout.
 7. Click the tip **chord line** with **Smart Dimension**, drag clear, type `= "c_tip"`, and press **`Enter`**.
 8. **3D spatial constraints:** rotate your viewport slightly into a 3D isometric perspective. Click your airfoil's front **leading-edge vertex point**, hold down the **`Ctrl`** key, and click directly on the outer **tip leading-edge point** drawn in your underlying `LAY_Wing_Plan` sketch.
 9. In the left-hand PropertyManager under *Add Relations*, click **Coincident** (or **Pierce** if a standard coincidence over-defines the plane's bounds). The profile will snap to its true 3D coordinates and turn solid black.
@@ -1613,11 +1623,11 @@ Recipe (identical on every plane; the height and width pierces are Phase 2):
 1. Click the target plane in the tree, click the **Sketch** icon, and press **`Ctrl + 8`** to snap normal to it.
 2. **Draw the bulbous tangent-arch section** exactly as in §6.4: a horizontal **flat floor**, closed by a **Style Spline** that leaves both floor endpoints on a **0° horizontal tangent**, **flares out to `w_fuse`/2**, and runs **Horizontal across the apex** — driven by the cage (`w_floor_pct`, `crown_sh_pct`, `crown_apex_pct`). This closed profile *is* the section; Phase 2 pierces and rails it to size.
 3. **Lock symmetry:** the cage's **Symmetric** relations about the **Right Plane** ($X = 0$) keep the section mirror-true and the apex on the centerline.
-4. **Place the five belly clock vertices on the flat floor.** Drop sketch **Points** on the floor line: **6 o'clock** (centerline), **4 / 8 o'clock** (floor corners = the spline's floor endpoints, at `= "w_floor_pct" * "w_fuse" / 2`), and **5 / 7 o'clock** (midway between corner and centre). The floor's **Horizontal** relation holds all five on one flat $Y$.
+4. **Place the five belly clock vertices on the flat floor.** Drop sketch **Points** on the floor line: **6 o'clock** (centerline), **4 / 8 o'clock** (floor corners = the spline's floor endpoints, at `= "w_fuse_floor_half"`), and **5 / 7 o'clock** (midway between corner and centre). The floor's **Horizontal** relation holds all five on one flat $Y$.
 5. **Place the crown clock vertices on the Style Spline** — three per side:
    - **3 / 9 o'clock (flare):** the **outermost flare control vertex** — the section's maximum width. Phase 2 binds it to the planform rail.
-   - **2 / 10 o'clock:** a **Point** pierced **Coincident** onto the spline, dimensioned to the waterline → `= "h_fuse_top" * 1 / 3`.
-   - **1 / 11 o'clock:** a point on the spline → `= "h_fuse_top" * 2 / 3`.
+   - **2 / 10 o'clock:** a **Point** pierced **Coincident** onto the spline, dimensioned to the waterline → `= "h_clock_2_10"`.
+   - **1 / 11 o'clock:** a point on the spline → `= "h_clock_1_11"`.
    - **12 o'clock:** the **apex** (on the centerline at `h_fuse_top`).
    Each crown point's $X$ rides the spline; its dimensioned $Y$ (or, for the flare, its coincidence to the width rail) fixes it along the curve.
    > **No literal clock angles.** The crown is a **Style Spline**, so its vertices are located by *proportional height* (`h_fuse_top * 2/3`, `* 1/3`) and by the **flare's coincidence to the planform width rail** — not by any circle-centre angle. Every dimension in the section is a global or a fractional expression of one.
@@ -1628,7 +1638,7 @@ Recipe (identical on every plane; the height and width pierces are Phase 2):
 - **Crown apex (12 o'clock):** **Pierce** / **Coincident** it to the **top** entity — the top keel `TF → TR` on the cabin sections, the **top-nose / top-tail shoulder spline** (through `M1` / `M2`) on the mid-transitions, `NT` / `TT` on the end-caps. The upper-crown points (1 / 2 / 10 / 11) ride the **spline** at their proportional heights, so the apex pierce plus the flare-rail bind fix the whole crown.
 - **Flat floor (6 o'clock + the floor line):** **Pierce** / **Coincident** the floor midpoint to the **bottom** entity — the bottom keel `BF → BR` on the cabin sections (a single flat $Y$), the **bottom-nose / bottom-tail shoulder spline** (through `M4` / `M3`) on the mid-transitions, `NB` / `TB` on the end-caps. The floor's **Horizontal** relation carries the 4 / 5 / 7 / 8 belly points to that same $Y$.
 
-> **Flat only through the cabin.** The floor is a true flat landing plane on `SET_Fuse_Firewall` and `SET_Fuse_Bay_Aft` (both piercing `BF → BR` at `= -("h_fuse" - "h_fuse_top")`); on the mid and end sections the belly rises along the bottom shoulder splines to `NB` / `TB` as the ends pinch up. The cabin run reads flat; the ends taper into it.
+> **Flat only through the cabin.** The floor is a true flat landing plane on `SET_Fuse_Firewall` and `SET_Fuse_Bay_Aft` (both piercing `BF → BR` at `= "h_fuse_bottom"`); on the mid and end sections the belly rises along the bottom shoulder splines to `NB` / `TB` as the ends pinch up. The cabin run reads flat; the ends taper into it.
 
 *Width (planform, `LAY_Wing_Plan`) — the Flare-Width Rail Method.* Because the maximum width now sits at the **flare** (mid-height), not the floor corner, bind the **flare** — not the floor — to the planform:
 1. **Pierce the planform.** With the **Point** tool, drop a point out to the side, hold **`Ctrl`**, select it and the **port fuselage-outline segment where it crosses this plane** in `LAY_Wing_Plan`, and click **Pierce**. It lands at the station's planform half-width (`w_fuse / 2` at the cabin, `w_fuse_break` at a break, `w_fuse / 4` at the nose flat, `tail_exit_D / 2` at the tail cap). Repeat starboard.
@@ -1970,7 +1980,7 @@ Most of these features already exist from §2–§7 — this is the **compliance
 
 **12.4 — 9-in prop keep-out** `[R §2]`.
 1. On **`PLN_PropDisk`**, confirm the **`D_prop`** circle and the concentric **`D_prop/2 + keepout`** ring (§6/§7).
-2. *Optional visual:* **Insert ▸ Surface ▸ Revolve** a reference disc/cylinder of radius `= "D_prop"/2 + "keepout"` about **`AX_Prop`** to see the exclusion zone in 3-D.
+2. *Optional visual:* **Insert ▸ Surface ▸ Revolve** a reference disc/cylinder of radius `= "R_keepout"` about **`AX_Prop`** to see the exclusion zone in 3-D.
 3. *Authoritative:* confirm **`arm_clear` ≥ 0** and **`sw_clear` ≥ 0** — the arming plug and on/off switch (both top, external, near centerline) sit ≥ 9 in aft of the prop disk.
 
 **12.5 — Propulsion envelope** `[R §9]`.
@@ -2143,7 +2153,7 @@ Each is framed as **Detect → Fix → Prevent** so it's actionable when you hit
 **14. Shoulder-spline bulge / reversal (dodecagon).** A shoulder breakpoint (`M1`–`M4`) height set to or past its keel value bows the shoulder spline out to (or beyond) the keel line — a local bulge or taper reversal instead of a clean blend; a break station pushed past its cabin face folds the spline back on itself. Keep each break strictly inside its keel-to-flat window (§4.4 Phase 5).
 - *Detect:* a transition segment "disappears," two segments read as one line, or the sketch throws an over-defined **(+)** prefix after you edit a break.
 - *Fix:* re-dimension the breakpoint height strictly between the apex-flat half-height and the full keel height (default `* 3 / 4`), and keep its station between the apex column and the cabin-face column (§3 / §4.4 Phase 5).
-- *Prevent:* never set a breakpoint height `= "h_fuse_top"` or `= "h_fuse" - "h_fuse_top"`; keep every break inside its zone.
+- *Prevent:* never set a breakpoint height `= "h_fuse_top"` or `= "h_fuse_bottom"`; keep every break inside its zone.
 
 **15. Dangling relations from an apex-to-flat split.** Converting a sharp apex into a vertical flat — or editing the end geometry — orphans any relation that referenced the old single apex vertex, including the §8.5 end-cap pierces.
 - *Detect:* `SET_Fuse_Nose` / `SET_Fuse_Tail` (or `SURF_Fuse_OML`) flag a rebuild error; **Display/Delete Relations** ▸ filter **Dangling** lists orphaned pierces.

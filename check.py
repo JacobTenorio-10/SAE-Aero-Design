@@ -29,7 +29,7 @@ import sys
 # ---- baselines ----------------------------------------------------------
 HASH_HEADERS_SKELETON = 25      # count of ^#{3,} in the SKELETON guide
 H2_SKELETON           = 15      # count of ^## in the SKELETON guide
-GLOBAL_COUNT          = 184     # definitions in skeleton_equations_micro.txt
+GLOBAL_COUNT          = 223     # definitions in skeleton_equations_micro.txt
 
 # Globals allowed to hold a negative value. Everything else is a distance or
 # a magnitude and must be positive - direction belongs to the sketch, not the
@@ -51,7 +51,7 @@ INSTALL   = "Installation_Layout_Guide_Micro.md"
 MD_FILES  = [PARAMS, SKELETON, INSTALL]
 
 # Identifiers that look like globals but are prose. Extend as needed.
-REF_IGNORE = {"global", "name", "value", "below", "above"}
+REF_IGNORE = {"global", "name", "value", "below", "above", "that_global", "some_global"}
 
 
 class Report:
@@ -185,6 +185,37 @@ def main():
         dangling = sorted(refs - nameset - REF_IGNORE)
         r.check(not dangling,
                 f"{f}: no dangling `= \"global\"` refs{'' if not dangling else ': ' + ', '.join(dangling)}")
+
+    # ---- 5. the one-variable rule ------------------------------------------
+    # Every Smart Dimension / Offset Distance / Modify entry must be a single
+    # global. Expressions typed into SolidWorks are invisible to the equations
+    # file and drift silently.
+    #
+    # Documentation of a global's own definition is NOT a dimension. Two shapes
+    # are recognised and exempted:
+    #   `some_global` `= <expr>`        (restating a definition)
+    #   ... is defined in ... as `= <expr>`
+    dim_kw = re.compile(r"Smart[- ]Dimension|Offset Distance|Modify|dimension|Dimension")
+    single = re.compile(r'^"[A-Za-z_][A-Za-z0-9_]*"$')
+    exempt = re.compile(r"\$[A-Z]+\$\d|RADIANS|^B3|^-A3|servo_\*|\u2026")
+    doc_re = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`\s*$")
+    for f in [SKELETON, INSTALL]:
+        bad = []
+        for i, line in enumerate(open(p(f), encoding="utf-8").read().split("\n"), 1):
+            if not dim_kw.search(line) or "is defined in" in line:
+                continue
+            for m2 in re.finditer(r"`=\s*([^`]+)`", line):
+                e = m2.group(1).strip()
+                if single.match(e) or exempt.search(e):
+                    continue
+                before = line[: m2.start()]
+                dm = doc_re.search(before)
+                if dm and dm.group(1) in nameset:      # restating that global's own equation
+                    continue
+                bad.append(f"L{i}: `= {e[:60]}`")
+        r.check(not bad,
+                f"{f}: one-variable rule"
+                + ("" if not bad else f" — {len(bad)} expression(s): " + "; ".join(bad[:4])))
 
     # ---- summary -----------------------------------------------------------
     print()
