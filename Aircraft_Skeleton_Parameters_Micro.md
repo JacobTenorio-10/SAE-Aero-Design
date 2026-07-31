@@ -1,4 +1,8 @@
 # Aircraft Skeleton — Parameters, Global Variables & Equations
+
+<details>
+<summary><b>SAE Aero Design 2026 · <b>Micro Class</b> · SolidWorks skeleton-driven model</b></summary>
+
 ### SAE Aero Design 2026 · **Micro Class** · SolidWorks skeleton-driven model
 Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requirements)** and the general aircraft/flight rules that apply to Micro. Rule-driven constraints are cited inline as `[R]`. The full copy-paste SolidWorks block is in **Appendix A**; a matching `skeleton_equations_micro.txt` is provided alongside (Appendix A is kept **byte-identical** to it).
 > **What's different for Micro vs. the generic version**
@@ -9,6 +13,12 @@ Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requ
 > - **9-inch (228.6 mm) prop keep-out** for the red arming plug and RX on/off switch, both on top/exterior near centerline. New compliance hardpoints + checks. `[R: §2 Red Arming Plug / On-Off Switch]`
 > - **Micro TDS** requires neutral-point and static-margin plots → keep `x_NP` and `SM` honest. `[R: §TDS Aircraft Performance Prediction]`
 ---
+
+</details>
+
+<details>
+<summary><b>How to use this</b></summary>
+
 ## How to use this
 - **Set document units to MMGS** (mm · gram · second). Lengths = mm, masses = g, water volume in cm³ (= mL).
 - **Reference other variables in quotes:** `"b"`, `"MAC"`.
@@ -21,6 +31,11 @@ Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requ
 > **The positive-magnitude rule.** **No value in `skeleton_equations_micro.txt` is ever negative** — angles included. Every global is a magnitude; direction is carried by the model (which side of a datum a dimension is placed, a plane's **Flip** toggle, a pattern's direction arrow), never by a stored sign. `i_HT` = 2.0 is nose-down because `PLN_Incidence_HT` is flipped that way, and `twist_tip` is a positive washout magnitude that `i_tip` **subtracts**. Formulas may contain a minus operator; values may not be negative. `check.py` enforces this with no exemptions.
 
 > **The one-variable rule.** Every SolidWorks Smart Dimension, plane **Offset Distance**, and **Modify** box takes exactly **one** global — `= "some_global"` — never an expression. All derivation lives in `skeleton_equations_micro.txt`. If a dimension needs a computed value, that computation gets its own named global here first. The **Derived-for-dimensioning** globals below exist purely to satisfy this rule: each one wraps a formula that used to be typed into a dimension box.
+
+</details>
+
+<details>
+<summary><b>1. Wing planform</b></summary>
 
 ## 1. Wing planform
 **Inputs**
@@ -48,6 +63,12 @@ $$S = \frac{(c_r + c_t)}{2}\,b, \quad AR = \frac{b^2}{S}, \quad \bar c = \frac{2
 Local chord at spanwise station $y$ (drives rib chords / spar line): $\;c(y) = c_r\left[1-(1-\lambda)\tfrac{2y}{b}\right]$
 **Micro note:** because span is penalized and area still has to lift ~2 kg of water off a short field, Micro wings trend to **low aspect ratio** (≈4–5) with large chords and aggressive high-lift, rather than high-AR efficiency wings.
 ---
+
+</details>
+
+<details>
+<summary><b>2. Wing structure (ribs &amp; spars)</b></summary>
+
 ## 2. Wing structure (ribs & spars)
 **Inputs**
 | Variable | Description | Units | Starter |
@@ -73,6 +94,12 @@ Local chord at spanwise station $y$ (drives rib chords / spar line): $\;c(y) = c
 | `x_joiner_root` | $=x_{spar\_root}$ (co-located w/ main spar) | mm |
 The spar lines are %chord: absolute spar-X at a station = LE-X + `spar_pct` × $c(y)$. Empty weight is heavily penalized `[R §9]`, so size ribs/caps/webs to the loads from servo-load and structural analysis, not by habit.
 ---
+
+</details>
+
+<details>
+<summary><b>3. Horizontal tail</b></summary>
+
 ## 3. Horizontal tail
 **Inputs**
 | Variable | Symbol | Description | Units | Starter |
@@ -97,6 +124,12 @@ The spar lines are %chord: absolute spar-X at a station = LE-X + `spar_pct` × $
 | `x_HT_LE_root` | $x_{HT,c/4} - 0.25\,c_{r,HT}$ | mm |
 $$S_{HT} = \frac{V_H\,S\,\bar c}{l_{HT}}, \qquad b_{HT} = \sqrt{AR_{HT}\,S_{HT}}, \qquad c_{r,HT} = \frac{2\,S_{HT}}{b_{HT}\,(1+\lambda_{HT})}$$
 ---
+
+</details>
+
+<details>
+<summary><b>4. Vertical tail</b></summary>
+
 ## 4. Vertical tail
 **Inputs**
 | Variable | Symbol | Description | Units | Starter |
@@ -119,6 +152,12 @@ $$S_{HT} = \frac{V_H\,S\,\bar c}{l_{HT}}, \qquad b_{HT} = \sqrt{AR_{HT}\,S_{HT}}
 | `x_VT_LE_root` | $x_{VT,c/4} - 0.25\,c_{r,VT}$ | mm |
 $$S_{VT} = \frac{V_V\,S\,b}{l_{VT}}, \qquad b_{VT} = \sqrt{AR_{VT}\,S_{VT}}$$
 ---
+
+</details>
+
+<details>
+<summary><b>5. Fuselage</b></summary>
+
 ## 5. Fuselage
 Longitudinal stations are **positive distances** from the wing-root LE (forward $= +Z$, aft $= -Z$; placement side chosen per each global). The fuselage must house the propulsion battery and route the bottom drain port; the payload container is not modeled. The cross-section is a **dome-arch** profile, lifted so ~**75 %** of `h_fuse` sits above the waterline.
 
@@ -163,6 +202,12 @@ Longitudinal stations are **positive distances** from the wing-root LE (forward 
 | `x_fuse_sleeve_plan` | absolute — boom-sleeve end, planform vertices (`SL_P`/`SL_C`) | 177.80 | −Z aft | — (no plane) |
 > `x_fuse_bay_fwd` and `x_fuse_bay_aft` sit on **opposite** sides of the Origin (+Z / −Z) and take opposite Flip states. Neither is a payload feature: `x_fuse_bay_fwd` is a forward cabin sub-station whose plane the §8.5 loft skips, and `x_fuse_bay_aft` is the cabin rear wall (constant-section aft bound). Both keep their container-era names so downstream derived parts stay linked. See §3 / §7.3.6.
 ---
+
+</details>
+
+<details>
+<summary><b>6. Control surfaces</b></summary>
+
 ## 6. Control surfaces
 **Inputs**
 | Variable | Description | Units | Starter |
@@ -175,6 +220,12 @@ Longitudinal stations are **positive distances** from the wing-root LE (forward 
 | `flap_out_pct` | Flap outboard station | %semi-span | 0.55 |
 **Derived:** `y_ail_in` $=\text{ail\_in\_pct}\cdot b/2$, `y_ail_out`, `y_flap_in`, `y_flap_out` (same form). Servos must be analysis/test-sized for flight loads with no backlash, and clevises need keepers `[R §2 Control Surface / Servo Sizing / Clevis Keepers]`.
 ---
+
+</details>
+
+<details>
+<summary><b>7. Propulsion (electric only) <code>[R §9]</code></b></summary>
+
 ## 7. Propulsion (electric only) `[R §9]`
 **Inputs**
 | Variable | Symbol | Description | Units | Starter |
@@ -190,6 +241,12 @@ Longitudinal stations are **positive distances** from the wing-root LE (forward 
 **Derived:** `prop_clear` $= h_{thrust} - D_p/2$ (must be $>0$; keep ≥ 50–75 mm static and re-check at rotation).
 The 450 W limit with a 4S pack is the hard ceiling on installed power — size the prop/gearing to convert that into the static thrust your 10-ft-takeoff target needs, not for top speed.
 ---
+
+</details>
+
+<details>
+<summary><b>8. Landing gear</b></summary>
+
 ## 8. Landing gear
 Micro rolls for takeoff (main gear stays on the take-off line, one release) and must land within a **200 ft** zone `[R §3.2 / §3.3]`.
 **Inputs**
@@ -203,6 +260,12 @@ Micro rolls for takeoff (main gear stays on the take-off line, one release) and 
 | `wheel_aux` | — | Auxiliary wheel diameter | mm | 45 |
 **Derived:** `wheel_base` $= x_{main}+x_{aux}$ (main aft + nose forward — opposite sides of the LE, so the separation is the **sum**); `gear_h` $= \text{wheel\_main}/2$ (axle height above ground = tire radius, so the tire bottom sits **flush**; ≈ 30 mm). Keep CG inside the wheel triangle, main gear just aft of `x_CG`, track $\gtrsim 1.5\times$ CG height.
 ---
+
+</details>
+
+<details>
+<summary><b>9. Mass, CG &amp; stability (water-payload mass model) <code>[R §9]</code></b></summary>
+
 ## 9. Mass, CG & stability (water-payload mass model) `[R §9]`
 **Inputs**
 | Variable | Symbol | Description | Units | Starter |
@@ -229,6 +292,12 @@ Micro rolls for takeoff (main gear stays on the take-off line, one release) and 
 $$W_{water}=V_w\,\rho_w, \qquad W_{TO}=W_{empty}+W_{container}+W_{water}, \qquad SM=\frac{x_{NP}-x_{CG}}{\bar c}$$
 Set `x_NP` from your stability tool (Micro must submit NP and static-margin plots). The loaded **and** drained CG must both sit inside `x_CG_fwd…x_CG_aft` — verify both, since the water leaves through the bottom port between scoring states.
 ---
+
+</details>
+
+<details>
+<summary><b>10. Performance &amp; sizing inputs (offline, SI)</b></summary>
+
 ## 10. Performance & sizing inputs (offline, SI)
 Compute in the aero spreadsheet (SI), then feed `b`, `c_root`, `c_tip` into §1. Stall-limited area (mass $m$, $g=9.81$):
 $$S = \frac{2\,m\,g}{\rho\,V_{stall}^{2}\,C_{L,\max}}$$
@@ -246,6 +315,12 @@ Other field limits: **one** takeoff try and **one** launch release per attempt; 
 **Scoring drivers (qualitative):** the flight score rewards **payload water weight** $\times$ the **takeoff multiplier** and penalizes **empty weight** and **wingspan**; the final score is the sum of your top **three** flights `[R §9 Micro Flight Scoring]`. So: maximize water, minimize empty weight, minimize span, take off in ≤ 10 ft.
 Spreadsheet inputs to keep: $\rho$, $V_{stall}$, $V_{cruise}$, $C_{L,\max}$ (with flaps), $C_{L,cruise}$, target $AR$, target $\lambda$, available static thrust at 450 W.
 ---
+
+</details>
+
+<details>
+<summary><b>11. Micro Class constraints, compliance &amp; hardpoints <code>[R §9, §2]</code></b></summary>
+
 ## 11. Micro Class constraints, compliance & hardpoints `[R §9, §2]`
 Capture every rule constraint as geometry so violations are visible and parametric.
 **Payload container** `[R §9 Payload Requirements]` — mass model only; no CAD geometry
@@ -274,6 +349,12 @@ Both the arming plug and the on/off switch must sit **≥ 9 in (228.6 mm) from a
 | `W_empty_lb` | $W_{empty}/453.592$ | empty weight in lb (scoring penalty) |
 > The `arm_clear`/`sw_clear` checks are **conservative** — they assume the plug/switch sit near centerline (radially inside the prop disk), so axial separation ≥ keep-out guarantees ≥ 9 in to the disk. If you mount them outboard of the prop radius, the true clearance is larger.
 ---
+
+</details>
+
+<details>
+<summary><b>12. Derived-for-dimensioning globals (one-variable rule)</b></summary>
+
 ## 12. Derived-for-dimensioning globals (one-variable rule)
 
 Each of these exists so a SolidWorks dimension can reference **one** name instead of an expression. None is a new design input — every value is derived from globals above it, so they all re-solve automatically. Do not type these numbers; type the name.
@@ -337,8 +418,13 @@ Each of these exists so a SolidWorks dimension can reference **one** name instea
 | `x_spar_root_HT_inc` | 44.1342 | HT spar root, in-plane chordwise (§5.8.1 Phase B) |
 | `x_spar_tip_HT_inc` | 44.1342 | HT spar tip, in-plane chordwise (§5.8.1 Phase B) |
 
+</details>
+
+<details>
+<summary><b>Appendix A — Complete SolidWorks equation block (copy-paste)</b></summary>
+
 ## Appendix A — Complete SolidWorks equation block (copy-paste)
-This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-arch section, 139.7 mm cabin). Paste via **Tools ▸ Equations ▸ Import**, or edit the `.txt` and re-import — never maintain the two separately.
+This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous tangent-arch section, 101.6 mm cabin pod). Paste via **Tools ▸ Equations ▸ Import**, or edit the `.txt` and re-import — never maintain the two separately.
 ```text
 "b"             = 1150      'wingspan [mm]  NO cap, but span is PENALIZED -> minimize
 "c_root"        = 225       'root chord [mm]
@@ -581,8 +667,16 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-ar
 "h_VT_tip"              = "h_tail_top" + "b_VT"   'VT fin-top height above waterline [mm] = fin base + fin height
 ```
 ---
+
+<details>
+<summary><b>After entering</b></summary>
+
 ### After entering
 - Force-rebuild (`Ctrl-Q`); confirm no equation flags red and that `arm_clear`, `sw_clear` are both ≥ 0.
 - Set `x_NP` from XFLR5/AVL; re-check that loaded and drained CG both land in `x_CG_fwd…x_CG_aft`.
 - Drive `V_water` up (more payload) and watch `W_TO`, `WL_g_dm2`, and your takeoff prediction respond — that's the central Micro trade.
 - Starters describe a ~1.1 m, ~2 kg-water Micro airframe for illustration, **not** a design point — replace with your team's sizing outputs.
+
+</details>
+
+</details>

@@ -14,6 +14,7 @@ straight to the sections that need touching. No searching.
 """
 
 import argparse
+import html as _html
 import os
 import re
 
@@ -24,9 +25,53 @@ DOCS = [
     ("PARAMS",   "Aircraft_Skeleton_Parameters_Micro.md"),
 ]
 
-# Section openers, in the house style: H2, hash-headers, and bold-para
-# subsections like **7.3.6 — ...**
-SECTION_RE = re.compile(r"^(?:(#{2,})\s*(.+?)\s*$|\*\*(\d+\.[\d.]*)\s*—\s*(.+?)\*\*)")
+DETAILS_OPEN  = re.compile(r"^\s*<details[^>]*>\s*$")
+DETAILS_CLOSE = re.compile(r"^\s*</details>\s*$")
+SUMMARY_RE    = re.compile(r"^\s*<summary>(.*)</summary>\s*$")
+
+
+def summary_text(s):
+    """<summary> inner HTML -> plain section label."""
+    s = re.sub(r"<[^>]+>", "", s)
+    return _html.unescape(s).strip()
+
+
+class SectionTracker:
+    """Innermost enclosing <details> summary, falling back to the last heading.
+
+    The guides are wrapped in nested toggle lists, so the toggle tree - not the
+    heading level - is what actually locates a line. Bold-paragraph subsection
+    titles now live in <summary>, so matching headings alone collapses every
+    reference up to its H2.
+    """
+
+    def __init__(self):
+        self.stack = []
+        self.heading = "(front matter)"
+
+    def feed(self, line):
+        if DETAILS_OPEN.match(line):
+            self.stack.append(None)
+            return
+        if DETAILS_CLOSE.match(line):
+            if self.stack:
+                self.stack.pop()
+            return
+        m = SUMMARY_RE.match(line)
+        if m:
+            if self.stack:
+                self.stack[-1] = summary_text(m.group(1))
+            return
+        m = re.match(r"^(#{2,6})\s+(.*)$", line)
+        if m:
+            self.heading = m.group(2).strip()
+
+    @property
+    def current(self):
+        for lbl in reversed(self.stack):
+            if lbl:
+                return lbl
+        return self.heading
 
 
 def parse_equations(path):
@@ -41,15 +86,6 @@ def parse_equations(path):
     return defs, txt
 
 
-def section_label(line):
-    m = SECTION_RE.match(line)
-    if not m:
-        return None
-    if m.group(1):
-        return m.group(2).strip()
-    return f"{m.group(3)} — {m.group(4).strip()}"
-
-
 def code_spans(line):
     return re.findall(r"`([^`]*)`", line) + re.findall(r'"([^"]*)"', line)
 
@@ -58,17 +94,16 @@ def scan(path, names):
     """-> {global: [(section, line_no), ...]} preserving document order."""
     text = open(path, encoding="utf-8").read()
     hits = {}
-    current = "(front matter)"
+    tracker = SectionTracker()
     in_fence = False
     for i, line in enumerate(text.split("\n"), 1):
-        if line.startswith("```"):
+        if line.lstrip().startswith("```"):
             in_fence = not in_fence
             continue
         if in_fence:                     # Appendix A is the equations file
             continue
-        lbl = section_label(line)
-        if lbl:
-            current = lbl
+        tracker.feed(line)
+        current = tracker.current
         seen = set()
         for span in code_spans(line):
             for ident in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", span):

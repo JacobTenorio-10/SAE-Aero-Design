@@ -1,4 +1,8 @@
 # Installation Layout — SAE Aero 2026 Micro (Systems, Layer L4)
+
+<details>
+<summary><b>Body-free installation part · derives from the <code>SKELETON</code> via Insert Part</b></summary>
+
 ### Body-free installation part · derives from the `SKELETON` via Insert Part
 
 > **What this is.** The **`INSTALLATION`** layer (L4) — the component space-claims and mechanism kinematics pulled out of the published skeleton because each is consumed by only *one* downstream part (the two-consumer test): servos, the payload drop-door, landing-gear wheels/steering, and the fill / belly / linkage clearance studies.
@@ -15,26 +19,67 @@
 
 ---
 
+</details>
+
+<details>
+<summary><b>I-1. Servo packaging &amp; skin-breach audit  <i>(from skeleton §7.7.3)</i></b></summary>
+
 ## I-1. Servo packaging & skin-breach audit  *(from skeleton §7.7.3)*
 
-**7.7.3 — Phase 3: Servo packaging & skin-breach audit.** Map each servo as a body-free **keep-out box** ahead of its hinge, then confirm it nests inside the OML skin.
-* **Step 1 — locate the servo station.** The aileron servo seats mid-aileron; its spanwise centre is `= "y_servo_ail"` (= 412.5 mm) — an expression, no new global. Build a local section plane there: **Insert ▸ Reference Geometry ▸ Plane**, First Reference = `AX_MainSpar_3D` → **Normal to Curve**, Second Reference = a point on the spar at that spanwise expression; green-check and rename `PLN_Servo_Ail`. *(Or skip the plane and sketch the plan footprint straight on `LAY_Wing_Plan`.)*
-* **Step 2 — the plan footprint (`LAY_Servo_Bay_Ail`), driven by the servo globals.**
-  1. Click `PLN_Servo_Ail` ▸ **Sketch** (or open `LAY_Wing_Plan`); press **`Ctrl + 8`**. Select **Corner Rectangle**; box-select its four lines and tick **For construction**.
-  2. Dimension the chordwise edge (along $Z$) → `= "servo_L"` and the spanwise edge (along $X$) → `= "servo_W"`.
-  3. **Seat it against the hinge.** Make the box's **aft edge Coincident** to the aileron hinge chordline (§7.7.2 Step 1) so the output arm reaches the hinge; the body then extends `servo_L` **forward ($+Z$)**. Dimension its spanwise centre to the centerline → `= "y_servo_ail"`. Exit; **F2** → `LAY_Servo_Bay_Ail`; file in `2_LAYOUT_SKETCHES`.
-* **Step 3 — the section footprint (thickness / height).** On `PLN_Servo_Ail`, open a second sketch and draw a **For construction** rectangle `= "servo_L"` (chordwise, $Z$) $\times$ `= "servo_H"` (vertical, $Y$), straddling the local chord line. Together the plan box (L $\times$ W) and the section box (L $\times$ H) bound the full 3-D servo keep-out.
-* **Step 4 — the skin-breach audit against `SURF_Wing_OML`** (needs the §8.4 surface).
-  1. On `PLN_Servo_Ail`, run **Tools ▸ Sketch Tools ▸ Intersection Curve**, click `SURF_Wing_OML`, green-check — SolidWorks traces the true local airfoil section (upper + lower skin contour) at the servo station.
-  2. Overlay your `= "servo_H"` $\times$ `= "servo_L"` section box on that contour. **Confirm the box sits entirely inside the upper and lower skin lines** — no edge crosses the OML.
-  3. *Low-aspect-ratio warning.* A Micro wing is big-chord but often **thin**; out at the aileron the taper has thinned the section, so a tall `servo_H` can punch through the skin. If the box breaches: pick a lower-profile servo (drop `servo_H`), move the bay **inboard** (raise the spanwise expression toward `y_ail_in`, where the chord — and thickness — is greater), or recess the servo behind a faired blister on the derived skin part (never on the skeleton OML). See §14 item 25.
-  > **Body-free.** Every rectangle here is **For construction** — no extrude, no boss. Re-run **Tools ▸ Evaluate ▸ Mass Properties**: mass stays **0.00 g** (§13.8).
+<details>
+<summary><b>7.7.3 — Phase 3: Servo packaging &amp; skin-breach audit</b></summary>
+
+Map each servo as a body-free **keep-out box** ahead of its hinge, then confirm it nests inside the OML skin.
+
+<details>
+<summary><b>Step 1 — locate the servo station</b></summary>
+
+The aileron servo seats mid-aileron; its spanwise centre is `= "y_servo_ail"` — one global, per the one-variable rule. Build a local section plane there: **Insert ▸ Reference Geometry ▸ Plane**, First Reference = `AX_MainSpar_3D` → **Normal to Curve**, Second Reference = a point on the spar at that spanwise expression; green-check and rename `PLN_Servo_Ail`. *(Or skip the plane and sketch the plan footprint straight on `LAY_Wing_Plan`.)*
+
+<details>
+<summary><b>Step 2 — the plan footprint (<code>LAY_Servo_Bay_Ail</code>), driven by the servo globals</b></summary>
+
+1. Click `PLN_Servo_Ail` ▸ **Sketch**; press **`Ctrl + 8`**. Select **Corner Rectangle**; box-select its four lines and tick **For construction**.
+2. Dimension the chordwise edge (along $Z$) → `= "servo_L"` and the spanwise edge (along $X$) → `= "servo_W"`.
+3. **Seat it against the hinge.** Make the box's **aft edge Coincident** to the aileron hinge chordline (§7.7.2 Step 1) so the output arm reaches the hinge; the body then extends `servo_L` **forward ($+Z$)**. Dimension its spanwise centre to the centerline → `= "y_servo_ail"`. Exit; **F2** → `LAY_Servo_Bay_Ail`; file in `2_LAYOUT_SKETCHES`.
+
+<details>
+<summary><b>Step 3 — the section footprint (thickness / height)</b></summary>
+
+On `PLN_Servo_Ail`, open a second sketch and draw a **For construction** rectangle `= "servo_L"` (chordwise, $Z$) $\times$ `= "servo_H"` (vertical, $Y$), straddling the local chord line. Together the plan box (L $\times$ W) and the section box (L $\times$ H) bound the full 3-D servo keep-out.
+
+<details>
+<summary><b>Step 4 — the skin-breach audit against <code>SURF_Wing_OML</code></b></summary>
+
+(needs the §8.4 surface).
+1. On `PLN_Servo_Ail`, run **Tools ▸ Sketch Tools ▸ Intersection Curve**, click `SURF_Wing_OML`, green-check — SolidWorks traces the true local airfoil section (upper + lower skin contour) at the servo station.
+2. Overlay your `= "servo_H"` $\times$ `= "servo_L"` section box on that contour. **Confirm the box sits entirely inside the upper and lower skin lines** — no edge crosses the OML.
+3. *Low-aspect-ratio warning.* A Micro wing is big-chord but often **thin**; out at the aileron the taper has thinned the section, so a tall `servo_H` can punch through the skin. If the box breaches: pick a lower-profile servo (drop `servo_H`), move the bay **inboard** (raise the spanwise expression toward `y_ail_in`, where the chord — and thickness — is greater), or recess the servo behind a faired blister on the derived skin part (never on the skeleton OML). See §14 item 25.
+> **Body-free.** Every rectangle here is **For construction** — no extrude, no boss. Re-run **Tools ▸ Evaluate ▸ Mass Properties**: mass stays **0.00 g** (§13.8).
 
 ---
 
+</details>
+
+</details>
+
+</details>
+
+</details>
+
+</details>
+
+</details>
+
+<details>
+<summary><b>I-2. Payload drop-door kinematics  <i>(from skeleton §7.8.1)</i></b></summary>
+
 ## I-2. Payload drop-door kinematics  *(from skeleton §7.8.1)*
 
-**7.8.1 — Phase 1: Payload hatch & drop-door kinematics (`LAY_Side_Profile`).** Sketch the door's swing as a construction overlay on the side profile so the fully-open envelope can be audited against the gear and ground.
+<details>
+<summary><b>7.8.1 — Phase 1: Payload hatch &amp; drop-door kinematics (<code>LAY_Side_Profile</code>)</b></summary>
+
+Sketch the door's swing as a construction overlay on the side profile so the fully-open envelope can be audited against the gear and ground.
 1. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Side_Profile` ▸ **Edit Sketch**; press **`Ctrl + 8`** (Normal To). Orientation on the Right Plane: $+Z$ forward, $+Y$ up, the belly is below the waterline ($-Y$). *(Prefer a clean tree? Open a dedicated **Right-Plane** sketch named `LAY_Hatch_Kinematics` instead and **Convert Entities** the bottom keel into it — the steps below are identical.)*
 2. **Hinge pivot.** Select the **Point** tool and drop a point on the **bottom cabin keel** (`BF → BR`, §4). Hold **`Ctrl`**, select the point and the keel line, add **Coincident**; then **Smart Dimension** its $Z$ to the Origin → `= "x_fuse_bay_fwd"` (the forward cabin sub-station, 50.00 mm **+Z**). This is the drop-door hinge. Note the **door length** still has no global — see step 3.
 3. **Closed-door line.** Select the **Line** tool, tick **For construction**. Draw from the pivot **aft ($-Z$)** along the keel; **Collinear** to the keel; **Smart Dimension** its length to the door length you want as a plain millimetre value (no global drives it — see the flag at the end of §I-2). Its aft end is the free / latch edge.
@@ -48,9 +93,19 @@
 
 ---
 
+</details>
+
+</details>
+
+<details>
+<summary><b>I-3. Landing-gear installation — taildragger, wheels &amp; steering  <i>(from skeleton §7.9)</i></b></summary>
+
 ## I-3. Landing-gear installation — taildragger, wheels & steering  *(from skeleton §7.9)*
 
-**7.9 — Kinematic Landing Gear, Taildragger Architecture, and Steering Alignment.** This section configures a **conventional (taildragger)** gear as body-free construction geometry: two forward main wheels *ahead of the CG* plus a small steerable tailwheel at the aft, every wheel tied to the one master **Ground Line** (§6.7). Same $+Z$ forward / $+Y$ up / $+X$ port frame, symmetric about the Right Plane, zero solid bodies. Build order: mains + deflection arc → tailwheel + steering axis → three-point stance → downstream struts / formers. Budget ~30 minutes.
+<details>
+<summary><b>7.9 — Kinematic Landing Gear, Taildragger Architecture, and Steering Alignment</b></summary>
+
+This section configures a **conventional (taildragger)** gear as body-free construction geometry: two forward main wheels *ahead of the CG* plus a small steerable tailwheel at the aft, every wheel tied to the one master **Ground Line** (§6.7). Same $+Z$ forward / $+Y$ up / $+X$ port frame, symmetric about the Right Plane, zero solid bodies. Build order: mains + deflection arc → tailwheel + steering axis → three-point stance → downstream struts / formers. Budget ~30 minutes.
 
 > **Config note.** A taildragger swaps the tricycle **nose** wheel (`x_aux`, `wheel_aux`) for an aft **tail** wheel — ignore or remove the nose-wheel globals for a conventional build. The mains ride the existing gear set: `track` = 260, `wheel_main` = 60, `w_wheel` = 25, `gear_h` = `wheel_main`/2, `x_main` = 40, `prop_clear`, `h_thrust` = 160, plus the `AX_GearAxle` datum and the master Ground Line (§6.7). The **tailwheel / steering block** is in `skeleton_equations_micro.txt`, mirrored into Appendix A of `Aircraft_Skeleton_Parameters_Micro.md`:
 >
@@ -61,7 +116,9 @@
 >
 > Both MMGS; store the rake in **degrees** and convert with `* pi/180` only inside a trig expression (§14 item 5).
 
-**7.9.1 — Phase 1: Main gear positioning & impact deflection (`LAY_Side_Profile` / `LAY_Front_View`).**
+<details>
+<summary><b>7.9.1 — Phase 1: Main gear positioning &amp; impact deflection (<code>LAY_Side_Profile</code> / <code>LAY_Front_View</code>)</b></summary>
+
 
 * **Taildragger longitudinal alignment (mains forward of the CG).**
   1. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Side_Profile` ▸ **Edit Sketch**; **`Ctrl + 8`**. Right Plane: $+Z$ forward, $+Y$ up.
@@ -79,7 +136,11 @@
   10. Trace the edge-on tire as a **Center Rectangle**, **For construction**: `= "wheel_main"` **vertical** $\times$ `= "w_wheel"` **horizontal**, centred on the axle point.
   11. **Promote** the wheel center: **Insert ▸ Reference Geometry ▸ Point** → `PT_Main_Axle` in `5_POINTS`; the lateral axle line is what `AX_GearAxle` (§7.2) rides.
 
-**7.9.2 — Phase 2: Aft tailwheel & steering pivot architecture (`AX_Tail_Steer`).**
+</details>
+
+<details>
+<summary><b>7.9.2 — Phase 2: Aft tailwheel &amp; steering pivot architecture (<code>AX_Tail_Steer</code>)</b></summary>
+
 * **Steering-axis rake angle.**
   1. Re-open `LAY_Side_Profile` (**Edit Sketch**, **`Ctrl + 8`**) and pan to the **far aft ($-Z$)**, near the tail-termination plane (`x_fuse_tail` = 177.80 mm-aft, pod exit).
   2. Draw a **For construction** line for the steering **kingpin**, running roughly top-to-bottom. Draw a second short **vertical Z-datum** construction line beside it.
@@ -91,13 +152,22 @@
      > **Still body-free.** A non-construction *sketch* circle is a profile, not a solid — leave it un-extruded and Mass Properties stays **0.00 g** (§13.8). It only reads as "solid" on screen to distinguish the physical wheel from the construction kinematics around it.
   6. **Promote** the axle vertex: **Insert ▸ Reference Geometry ▸ Point** → `PT_Tail_Axle` in `5_POINTS`.
 
-**7.9.3 — Phase 3: Three-point stance & Ground Line integration.**
+</details>
+
+<details>
+<summary><b>7.9.3 — Phase 3: Three-point stance &amp; Ground Line integration</b></summary>
+
 1. **Multi-wheel ground alignment.** Both the forward main tires (Phase 1) and the aft tailwheel (Phase 2) reference the single master **Ground Line** (§6.7) — in `LAY_Front_View` for the mains and `LAY_Side_Profile` for the fore-aft stance.
 2. **Static stance rake audit.** Add a **Tangent** relation between the **bottom perimeter of the tailwheel circle** and the **Ground Line**; confirm the forward main-tire rectangles stay **flush** (bottom edge on the Ground Line). With the tall mains forward and the small tailwheel aft, the airframe now rests nose-high.
 3. **Decoupled protection — let the axles float on tire radius, never pin them to the waterline.** Each axle must sit its **own tire radius** above the Ground Line: the mains at `= "gear_h"` (already `gear_h`), the tailwheel at `= "gear_h_tail"`. Pin the **ground contact** (the tangent / flush relation), and let each axle *ride up and down* with its radius equation. Then swapping to a taller tire lifts that axle while the Ground Line — and the whole stance datum — stays put.
    > **Why this matters.** This dual contact automatically sets the static three-point stance angle relative to the waterline ($Y = 0$). If instead you hard-pin both axles directly to the waterline, the model over-defines the instant a tire diameter changes and the stance angle freezes or errors (§14 item 29). The waterline is the *airframe* datum; the Ground Line is the *stance* datum — keep them linked only through the tire-radius equations.
 
-**7.9.4 — Phase 4: Downstream component derivation (struts & former bulkheads).** Structural leads consume the gear datums via **Insert Part** (derived), never in-context (§9.1).
+</details>
+
+<details>
+<summary><b>7.9.4 — Phase 4: Downstream component derivation (struts &amp; former bulkheads)</b></summary>
+
+Structural leads consume the gear datums via **Insert Part** (derived), never in-context (§9.1).
 * **Main gear strut (`Main_Gear_Strut.SLDPRT`).**
   1. **File ▸ New ▸ Part**; **Save As** to `Z:\SAE_Micro_2026\02_Parts\Main_Gear_Strut.SLDPRT`.
   2. **Insert ▸ Part…**, select `AIRCRAFT_SKELETON_SAE_MICRO26.SLDPRT`, **Open**. Under **Transfer** check **Axes** (`AX_GearAxle`) and **Planes**; leave **"Locate part with Move/Copy Feature" UNCHECKED** so it derives at the coincident origin (§9.1).
@@ -109,9 +179,21 @@
 
 ---
 
+</details>
+
+</details>
+
+</details>
+
+<details>
+<summary><b>I-4 – I-6. Systems clearance &amp; linkage studies  <i>(from skeleton §7.13 – §7.15)</i></b></summary>
+
 ## I-4 – I-6. Systems clearance & linkage studies  *(from skeleton §7.13 – §7.15)*
 
-**7.13 — Top Fill-Hole Access Clearance Vector (`AX_Fill_Path`).** This establishes a single vertical reference axis rising from the cabin crown face, up through the upper hull, reserving an unobstructed line for the top fill / liquid-deploy port so no downstream deck, wing-seat tie, or former can grow across it. Body-free construction geometry — it adds no mass. Budget ~8 minutes.
+<details>
+<summary><b>7.13 — Top Fill-Hole Access Clearance Vector (<code>AX_Fill_Path</code>)</b></summary>
+
+This establishes a single vertical reference axis rising from the cabin crown face, up through the upper hull, reserving an unobstructed line for the top fill / liquid-deploy port so no downstream deck, wing-seat tie, or former can grow across it. Body-free construction geometry — it adds no mass. Budget ~8 minutes.
 
 1. **Open the side profile.** Edit `LAY_Side_Profile` on the Right Plane ($X = 0$) — the sketch that carries the cabin keels and the `x_fuse_*` station columns (§4.4).
 2. **Drop the fill centerline.** Sketch ▸ **Line** — draw one segment from the **top edge** of the bay rectangle straight up.
@@ -125,7 +207,12 @@ The reserved clear span is fully global-driven — it runs from the bay-rectangl
 
 > **Verification & Success state:** `AX_Fill_Path` is vertical (parallel to $+Y$), lies on the Right Plane at the `x_bay` station, with its lower end **Coincident** to the cabin crown line and its upper end **above** `= "h_fuse_top"`. The sketch is fully defined (black). **Tools ▸ Evaluate ▸ Mass Properties** reads **0.00 g** with an empty Solid Bodies folder.
 
-**7.14 — Belly Drop-Door Plumbing & Deflection Margin (`LAY_Belly_Clearance`).** This lays an external clearance overlay tracking beneath the bottom cabin keel, protecting the gravity drain line and plumbing stack through a hard-landing gear compression. It tracks the **flat-bottom keel** — the constant lower keel line at `= "h_fuse_bottom"` relative to the waterline. Body-free overlay — zero mass. Budget ~10 minutes.
+</details>
+
+<details>
+<summary><b>7.14 — Belly Drop-Door Plumbing &amp; Deflection Margin (<code>LAY_Belly_Clearance</code>)</b></summary>
+
+This lays an external clearance overlay tracking beneath the bottom cabin keel, protecting the gravity drain line and plumbing stack through a hard-landing gear compression. It tracks the **flat-bottom keel** — the constant lower keel line at `= "h_fuse_bottom"` relative to the waterline. Body-free overlay — zero mass. Budget ~10 minutes.
 
 1. **Start the overlay sketch.** Insert ▸ Sketch on the Right Plane ($X = 0$); this becomes `LAY_Belly_Clearance`, filed in `2_LAYOUT_SKETCHES`.
 2. **Track the keel.** Sketch ▸ **Line** spanning the drain region aft ($-Z$).
@@ -138,7 +225,12 @@ The reserved clear span is fully global-driven — it runs from the bay-rectangl
 
 > **Verification & Success state:** `LAY_Belly_Clearance` is fully defined (black), lives on $X = 0$, and brackets the keel from `= "x_drain"` aft ($-Z$). The stack line sits `= "plumb_drop"` below the keel; the margin line sits a further `= "belly_margin"` below and references `= "gear_h"` off the Ground Line. Every entity is construction; the skeleton still reads **0.00 g** with an empty Solid Bodies folder.
 
-**7.15 — Mechanical Ground-Steering Linkage Sweep (`LAY_Steering_Links`).** This maps the tailwheel pushrod / cable trajectory from the steering kingpin forward to the servo, bounding it against the cabin rear wall (`x_fuse_bay_aft`) and the propulsion-battery envelope so no linkage fouls an internal envelope. Everything rides in the Right Plane on the same $+Z$ forward / $+Y$ up frame as pure construction geometry — zero solid bodies. Budget ~12 minutes.
+</details>
+
+<details>
+<summary><b>7.15 — Mechanical Ground-Steering Linkage Sweep (<code>LAY_Steering_Links</code>)</b></summary>
+
+This maps the tailwheel pushrod / cable trajectory from the steering kingpin forward to the servo, bounding it against the cabin rear wall (`x_fuse_bay_aft`) and the propulsion-battery envelope so no linkage fouls an internal envelope. Everything rides in the Right Plane on the same $+Z$ forward / $+Y$ up frame as pure construction geometry — zero solid bodies. Budget ~12 minutes.
 
 1. **Start the linkage sketch.** Insert ▸ Sketch on the Right Plane ($X = 0$); this becomes `LAY_Steering_Links`, filed in `2_LAYOUT_SKETCHES`.
 2. **Seed the horn sweep.** Sketch ▸ **Circle** (construction) centered where `AX_Tail_Steer` (§7.9.2) meets the deck, radius `= "horn_R"`. Add a **Coincident** between the circle center and the axis endpoint (use **Pierce** if the kingpin crosses the sketch plane). This arc is the output-horn envelope.
@@ -152,15 +244,30 @@ The reserved clear span is fully global-driven — it runs from the bay-rectangl
 
 ---
 
+</details>
+
+</details>
+
+<details>
+<summary><b>I-7. Validation — installation checks  <i>(from skeleton §13.3.8 / §13.7.6)</i></b></summary>
+
 ## I-7. Validation — installation checks  *(from skeleton §13.3.8 / §13.7.6)*
 
-**13.3.8 — Fluid-systems & steering clearance rebuild check (§7.13–§7.15).** Prove the fill, belly, and steering datums re-track their drivers under a combined cabin / gear flex. **Tools ▸ Equations**: raise `h_fuse_top` (+20 mm), shift `x_bay` (60 → 75), and grow a tire (`wheel_main` 60 → 90, so `gear_h` rises), then force a **`Ctrl + Q`** rebuild.
+<details>
+<summary><b>13.3.8 — Fluid-systems &amp; steering clearance rebuild check (§7.13–§7.15)</b></summary>
+
+Prove the fill, belly, and steering datums re-track their drivers under a combined cabin / gear flex. **Tools ▸ Equations**: raise `h_fuse_top` (+20 mm), shift `x_bay` (60 → 75), and grow a tire (`wheel_main` 60 → 90, so `gear_h` rises), then force a **`Ctrl + Q`** rebuild.
 - *Fill path:* `AX_Fill_Path` re-extends so its upper end still clears `h_fuse_top` (the overshoot holds) and its lower end stays **Coincident** to the cabin crown as the fill station walks with `x_bay`.
 - *Belly overlay:* the `LAY_Belly_Clearance` baseline re-drops with the keel (`= "h_fuse_bottom"`) and still holds `plumb_drop` below it and `belly_margin` below that, the margin line tracking the Ground Line through `gear_h`.
 - *Steering corridor:* `LAY_Steering_Links` re-sweeps off `AX_Tail_Steer` and the corridor stays aft of `PLN_Fuse_Bay_Aft` (`x_fuse_bay_aft`) and clear of the battery reference.
 - *Body-free:* **Tools ▸ Evaluate ▸ Mass Properties** → still **0.00 g**, Solid Bodies folder empty (§13.8). **Undo all.**
 
-**13.7.6 — Taildragger stance & prop-clearance check (§7.9).** A taildragger flies through two attitudes, so the propeller clearance must be legal in **both**.
+</details>
+
+<details>
+<summary><b>13.7.6 — Taildragger stance &amp; prop-clearance check (§7.9)</b></summary>
+
+A taildragger flies through two attitudes, so the propeller clearance must be legal in **both**.
 - **3-point stance (static, tail down):** confirm both main-tire rectangles and the tailwheel circle rest on the Ground Line (Tangent / flush, §7.9.3). Nose-high, so the blade tip sits *higher* — record the tip-to-ground here as the loose case.
 - **2-point / takeoff attitude (tail up, waterline level):** rotate the model so the fuselage waterline runs parallel to the Ground Line. **Measure** the prop-disk bottom to the Ground Line — this is the **tight** case and must stay $\ge$ `prop_clear` (`= "prop_clear"`; §6.7). A taildragger's blade is closest to the runway just as the tail lifts, so this attitude, not the static one, governs.
 - **Mains-forward check:** **Measure** `PT_Main_Axle` (or `AX_GearAxle`) to `PT_CG_target` along $Z$ and confirm the axle is **forward ($+Z$, smaller aft-distance)** — a positive nose-over margin.
@@ -168,6 +275,13 @@ The reserved clear span is fully global-driven — it runs from the bay-rectangl
 - *Body-free:* all wheels, arcs, and the kingpin are construction / reference — Mass Properties stays **0.00 g** (§13.8).
 
 ---
+
+</details>
+
+</details>
+
+<details>
+<summary><b>I-8. Common pitfalls — installation  <i>(former skeleton §14 items 24–34; numbers retained)</i></b></summary>
 
 ## I-8. Common pitfalls — installation  *(former skeleton §14 items 24–34; numbers retained)*
 
@@ -221,3 +335,5 @@ The reserved clear span is fully global-driven — it runs from the bay-rectangl
 - *Detect:* `->x` dangling markers on the belly / steering dimensions; the sketches will not solve.
 - *Fix:* confirm the three globals (and `horn_R` / `link_L` from §7.8) are present in the equations file and re-Import.
 - *Prevent:* keep Appendix A of the parameter reference byte-identical to the equations file; add new globals to both before referencing them.
+
+</details>
