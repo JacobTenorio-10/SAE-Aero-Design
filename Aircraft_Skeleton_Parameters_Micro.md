@@ -18,6 +18,8 @@ Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requ
 - **Inputs vs derived:** never hard-type what an equation can produce. Geometry-first here (input $b$, $c_r$, $c_t$); §10 gives the performance-first flip.
 - **Offline (SI) block:** aero/takeoff sizing in §10 is unit-messy in MMGS — keep it in your sizing spreadsheet and feed `b`, `c_root`, `c_tip` back in.
 ---
+> **The positive-magnitude rule.** **No value in `skeleton_equations_micro.txt` is ever negative** — angles included. Every global is a magnitude; direction is carried by the model (which side of a datum a dimension is placed, a plane's **Flip** toggle, a pattern's direction arrow), never by a stored sign. `i_HT` = 2.0 is nose-down because `PLN_Incidence_HT` is flipped that way, and `twist_tip` is a positive washout magnitude that `i_tip` **subtracts**. Formulas may contain a minus operator; values may not be negative. `check.py` enforces this with no exemptions.
+
 > **The one-variable rule.** Every SolidWorks Smart Dimension, plane **Offset Distance**, and **Modify** box takes exactly **one** global — `= "some_global"` — never an expression. All derivation lives in `skeleton_equations_micro.txt`. If a dimension needs a computed value, that computation gets its own named global here first. The **Derived-for-dimensioning** globals below exist purely to satisfy this rule: each one wraps a formula that used to be typed into a dimension box.
 
 ## 1. Wing planform
@@ -298,9 +300,7 @@ Each of these exists so a SolidWorks dimension can reference **one** name instea
 | `b_semi_HT_proj` | 207.3009 | HT spar tip, in-plane span (§5.8.2) |
 | `x_VT_spar_root` | 892.2385 | VT spar root, chordwise (§6.8.1) |
 | `x_VT_spar_tip` | 954.3691 | VT spar tip, chordwise (§6.8.1) |
-| `h_VT_tip` | 242.8813 | VT fin top height (§7.3.8) |
-| `h_VT_root_proj` | 35.7891 | VT spar root, in-plane height (§6.8.1) |
-| `h_VT_tip_proj` | 242.8813 | VT spar tip, in-plane height (§6.8.1) |
+| `h_VT_tip` | 242.8813 | VT fin top height — fin spar tip and `PLN_VT_Tip` (§6.8.1, §7.3.8) |
 | `h_fuse_bottom` | 25.4000 | bottom keel below WL (§4.4, §6.4, §8.5) |
 | `w_fuse_half` | 50.8000 | cabin max half-width, flare (§6.4) |
 | `h_crown_flare` | 66.0400 | flare vertex height (§6.4) |
@@ -317,6 +317,25 @@ Each of these exists so a SolidWorks dimension can reference **one** name instea
 | `x_bat_aft` | 80.6300 | battery aft face (§I-5) |
 | `x_CG_drained` | 215.6909 | drained CG (§7.8.3) |
 | `x_CG_empty` | 232.6754 | empty CG (§7.8.3) |
+| `x_LE_tip` | 100.8767 | wing tip LE, chordwise (§7.2 Phase B) |
+| `y_MAC_proj` | 288.2020 | MAC line, in-plane span (§7.2 Phase B) |
+| `rib_root_off_proj` | 20.0488 | rib seed, in-plane span (§7.2 Phase B) |
+| `rib_pitch_proj` | 83.2027 | rib pattern, in-plane pitch (§7.2 Phase B) |
+| `y_emp_axis` | 25.0000 | empennage datum height above Top Plane (§2.3.1) — INPUT |
+| `x_LE_tip_inc` | 100.8767 | wing tip LE, in-plane chordwise (§7.2 Phase B) |
+| `x_spar_root_inc` | 56.2500 | main spar root, in-plane chordwise (§7.2 Phase B) |
+| `x_spar_tip_swept_inc` | 157.1267 | main spar tip, in-plane chordwise (§7.2 Phase B) |
+| `x_rspar_root_inc` | 157.5000 | rear spar root, in-plane chordwise (§7.2 Phase B) |
+| `x_rspar_tip_inc` | 157.5000 | rear spar tip, in-plane chordwise (§7.2 Phase B) |
+| `x_joiner_root_inc` | 56.2500 | wing joiner, in-plane chordwise (§7.2 Phase B) |
+| `x_MAC_LE_inc` | 55.9884 | MAC LE, in-plane chordwise (§7.2 Phase B) |
+| `x_MAC_c4_inc` | 112.2384 | MAC c/4, in-plane chordwise (§7.2 Phase B) |
+| `x_hinge_ail_in_inc` | 224.4000 | aileron inbd hinge, in-plane chordwise (§7.2 Phase B) |
+| `x_hinge_ail_out_inc` | 264.7000 | aileron outbd hinge, in-plane chordwise (§7.2 Phase B) |
+| `x_hinge_flap_in_inc` | 167.6000 | flap inbd hinge, in-plane chordwise (§7.2 Phase B) |
+| `x_hinge_flap_out_inc` | 212.9000 | flap outbd hinge, in-plane chordwise (§7.2 Phase B) |
+| `x_spar_root_HT_inc` | 44.1342 | HT spar root, in-plane chordwise (§5.8.1 Phase B) |
+| `x_spar_tip_HT_inc` | 44.1342 | HT spar tip, in-plane chordwise (§5.8.1 Phase B) |
 
 ## Appendix A — Complete SolidWorks equation block (copy-paste)
 This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-arch section, 139.7 mm cabin). Paste via **Tools ▸ Equations ▸ Import**, or edit the `.txt` and re-import — never maintain the two separately.
@@ -327,8 +346,8 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-ar
 "sweep_LE"      = 11.02     'LE sweep [deg]
 "dihedral"      = 4         'dihedral [deg]
 "i_wing"        = 0.0       'wing incidence [deg]
-"twist_tip"     = 0.0       'tip washout [deg] (negative = washout; angle, not a distance)
-"i_tip"                 = "i_wing" + "twist_tip"   'tip chord incidence [deg] = root incidence + washout
+"twist_tip"     = 0.0       'tip WASHOUT magnitude [deg]; POSITIVE = tip incidence lower than root (subtracted in i_tip), never enter a negative
+"i_tip"                 = "i_wing" - "twist_tip"   'tip chord incidence [deg] = root incidence MINUS the washout magnitude
 "b_semi"        = 518       'main lifting-panel semi-span on PLN_Dihedral [mm]; ABSOLUTE (was "b"/2). b/2 = 575 = 518 panel + 57 vertical tip; winglet modeled downstream
 "taper"         = "c_tip" / "c_root"
 "S_w"           = ("c_root" + "c_tip") / 2 * "b"
@@ -350,17 +369,28 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-ar
 "tc_tip"        = 0.14
 "rib_pitch"     = ("b_semi" - "rib_root_off") / ("n_rib" - 1)   'spanwise pitch [mm]
 "rib_root_off_physical" = "rib_root_off" * sqr("b_semi"^2 + ("b_semi"*tan("dihedral"*pi/180))^2 + ("spar_main_pct"*("c_root"-"c_tip"))^2) / "b_semi"   'first rib offset ALONG 3D spar (physical) [mm]; = rib_root_off * (3D spar len / semi-span); tracks rib_root_off
+"rib_root_off_proj"     = "rib_root_off" / cos("dihedral" * pi/180)   'RIB SEED: in-plane spanwise dist from Origin on PLN_Dihedral [mm]; /cos projects to X = rib_root_off
+"rib_pitch_proj"        = "rib_pitch" / cos("dihedral" * pi/180)   'RIB PATTERN: in-plane spanwise pitch on PLN_Dihedral [mm]; /cos projects to spanwise rib_pitch
 "x_spar_root"   = "spar_main_pct" * "c_root"   'AFT distance of main spar @ root [mm]
 "x_rspar_root"  = "spar_rear_pct" * "c_root"   'AFT distance of rear spar @ root [mm]
 "x_rspar_tip"   = "spar_rear_pct" * "c_tip"    'AFT distance of rear spar @ tip [mm]
 "x_spar_tip"            = "spar_main_pct" * "c_tip"   'AFT distance of main spar @ tip [mm]
 "x_spar_tip_swept"      = "b_semi" * tan("sweep_LE" * pi/180) + "spar_main_pct" * "c_tip"   'SPAR TIP: dist to Front Plane, aft (-Z) [mm]; LE sweep carried to tip + spar fraction of tip chord
+"x_LE_tip"              = "b_semi" * tan("sweep_LE" * pi/180)   'WING TIP LE: dist to Front Plane, aft (-Z) [mm]; LE-sweep walk out to the tip station
+"x_LE_tip_inc"          = "x_LE_tip" / cos("i_wing" * pi/180)   'WING TIP LE: in-plane chordwise dist from Origin on PLN_Incidence [mm]
+"x_spar_root_inc"       = "x_spar_root" / cos("i_wing" * pi/180)   'MAIN SPAR ROOT: in-plane chordwise dist from Origin on PLN_Incidence [mm]
+"x_spar_tip_swept_inc"  = "x_spar_tip_swept" / cos("i_wing" * pi/180)   'MAIN SPAR TIP: in-plane chordwise dist from Origin on PLN_Incidence [mm]
+"x_rspar_root_inc"      = "x_rspar_root" / cos("i_wing" * pi/180)   'REAR SPAR ROOT: in-plane chordwise dist from Origin on PLN_Incidence [mm]
+"x_rspar_tip_inc"       = "x_rspar_tip" / cos("i_wing" * pi/180)   'REAR SPAR TIP: in-plane chordwise dist from the TIP LE on PLN_Incidence [mm]
 "x_joiner_root" = "x_spar_root"   'AFT distance of wing joiner/spar-tube @ root [mm]; co-located with main spar
+"x_joiner_root_inc"     = "x_joiner_root" / cos("i_wing" * pi/180)   'WING JOINER: in-plane chordwise dist from Origin on PLN_Incidence [mm]
+"x_MAC_LE_inc"          = "x_MAC_LE" / cos("i_wing" * pi/180)   'MAC LE: in-plane chordwise dist from Origin on PLN_Incidence [mm]
+"x_MAC_c4_inc"          = "x_MAC_c4" / cos("i_wing" * pi/180)   'MAC c/4: in-plane chordwise dist from Origin on PLN_Incidence [mm]
 "V_H"           = 0.98      'horizontal tail volume coeff
 "l_HT"          = 780        'wing c/4 -> HT c/4 arm [mm]; yields x_HT_LE_root = 850 aft (matches XFLR5 LE-to-LE)
 "AR_HT"         = 2.35
 "taper_HT"      = 1.00
-"i_HT"          = -2.0      'HT incidence [deg] (angle, not a distance)
+"i_HT"          = 2.0       'HT incidence magnitude [deg]; POSITIVE, nose-DOWN vs AX_Long_Emp - direction set by the PLN_Incidence_HT Flip (5.8.1), never by a sign
 "sweep_HT"      = 0
 "c_elev_pct"    = 0.35
 "S_HT"          = "V_H" * "S_w" * "MAC" / "l_HT"
@@ -374,6 +404,8 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-ar
 "x_HT_LE_root"  = "x_HT_c4" - 0.25 * "c_root_HT"   'AFT distance of HT root LE [mm]
 "x_spar_root_HT"        = "spar_main_pct" * "c_root_HT"   'AFT distance of HT main spar @ root, from HT root LE [mm]
 "x_spar_tip_HT"         = "spar_main_pct" * "c_tip_HT"   'AFT distance of HT main spar @ tip, from HT tip LE [mm]
+"x_spar_root_HT_inc"    = "x_spar_root_HT" / cos("i_HT" * pi/180)   'HT SPAR ROOT: in-plane chordwise dist from the HT root LE on PLN_Incidence_HT [mm]
+"x_spar_tip_HT_inc"     = "x_spar_tip_HT" / cos("i_HT" * pi/180)   'HT SPAR TIP: in-plane chordwise dist from the HT tip LE on PLN_Incidence_HT [mm]
 "x_HT_spar_root"        = "x_HT_LE_root" + "spar_main_pct" * "c_root_HT"   'HT SPAR ROOT: dist to Front Plane, aft (-Z) [mm]
 "x_HT_spar_tip"         = "x_HT_LE_root" + "b_semi_HT" * tan("sweep_HT" * pi/180) + "spar_main_pct" * "c_tip_HT"   'HT SPAR TIP: dist to Front Plane, aft (-Z) [mm]
 "V_V"           = 0.073     'vertical tail volume coeff
@@ -395,6 +427,7 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-ar
 "w_fuse"        = 101.6      'max width [mm] = 4 in (cabin cross-section)
 "h_fuse"        = 101.6      'max height [mm] = 4 in (cabin cross-section)
 "h_fuse_top"    = 76.2       'top keel ABOVE waterline [mm]; = 75% of h_fuse (3 in); bottom keel = h_fuse - h_fuse_top (1 in)
+"y_emp_axis"            = 25        'EMPENNAGE DATUM: height of AX_Long_Emp above the Top Plane / waterline [mm]; boom centerline
 "h_fuse_bottom"         = "h_fuse" - "h_fuse_top"   'bottom keel BELOW waterline [mm]; positive magnitude, dimension downward
 "w_fuse_half"           = "w_fuse" / 2   'cabin max half-width (cross-section flare) [mm]
 "x_motor"       = 152.40    'motor/prop FORWARD distance from LE [mm]  (+Z side)
@@ -424,11 +457,16 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-ar
 "y_flap_in_proj"        = "y_flap_in" / cos("dihedral" * pi/180)   'FLAP INBD: in-plane spanwise dist from Origin on PLN_Dihedral [mm]
 "y_flap_out_proj"       = "y_flap_out" / cos("dihedral" * pi/180)   'FLAP OUTBD: in-plane spanwise dist from Origin on PLN_Dihedral [mm]
 "x_hinge_ail_in"        = "y_ail_in" * tan("sweep_LE" * pi/180) + (1 - "c_ail_pct") * ("c_root" - ("c_root" - "c_tip") * "ail_in_pct")   'AIL INBD hinge: dist to Front Plane, aft (-Z) [mm]; 75%c station + LE-sweep walk
+"x_hinge_ail_in_inc"    = "x_hinge_ail_in" / cos("i_wing" * pi/180)   'AIL INBD hinge: in-plane chordwise dist from Origin on PLN_Incidence [mm]
 "x_hinge_ail_out"       = "y_ail_out" * tan("sweep_LE" * pi/180) + (1 - "c_ail_pct") * ("c_root" - ("c_root" - "c_tip") * "ail_out_pct")   'AIL OUTBD hinge: dist to Front Plane, aft (-Z) [mm]
+"x_hinge_ail_out_inc"   = "x_hinge_ail_out" / cos("i_wing" * pi/180)   'AIL OUTBD hinge: in-plane chordwise dist from Origin on PLN_Incidence [mm]
 "x_hinge_flap_in"       = "y_flap_in" * tan("sweep_LE" * pi/180) + (1 - "c_flap_pct") * ("c_root" - ("c_root" - "c_tip") * "flap_in_pct")   'FLAP INBD hinge: dist to Front Plane, aft (-Z) [mm]; 70%c station + LE-sweep walk
+"x_hinge_flap_in_inc"   = "x_hinge_flap_in" / cos("i_wing" * pi/180)   'FLAP INBD hinge: in-plane chordwise dist from Origin on PLN_Incidence [mm]
 "x_hinge_flap_out"      = "y_flap_out" * tan("sweep_LE" * pi/180) + (1 - "c_flap_pct") * ("c_root" - ("c_root" - "c_tip") * "flap_out_pct")   'FLAP OUTBD hinge: dist to Front Plane, aft (-Z) [mm]
+"x_hinge_flap_out_inc"  = "x_hinge_flap_out" / cos("i_wing" * pi/180)   'FLAP OUTBD hinge: in-plane chordwise dist from Origin on PLN_Incidence [mm]
 "y_servo_ail"           = ("y_ail_in" + "y_ail_out") / 2   'aileron servo spanwise centre (mid-aileron) [mm]
 "b_semi_proj"           = "b_semi" / cos("dihedral" * pi/180)   'SPAR TIP: in-plane spanwise dist from Origin on PLN_Dihedral [mm]; /cos projects to X = b_semi
+"y_MAC_proj"            = "y_MAC" / cos("dihedral" * pi/180)   'MAC line: in-plane spanwise dist from Origin on PLN_Dihedral [mm]; /cos projects to X = y_MAC
 "D_prop"        = 280       'prop diameter [mm]
 "motor_L"       = 50.80     'main motor length [mm] = 2.00 in
 "motor_D"       = 39.37     'main motor max diameter [mm] = 1.55 in
@@ -540,10 +578,7 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (dome-ar
 "rib_pitch_VT"   = "b_VT" / ("n_rib_VT" - 1)   'VT section-plane pitch up +Y [mm]; seeds LPTN_RibPlanes_VT, last plane at b_VT (derived, tracks n_rib_VT)
 "dihedral_HT"    = 0         'HT dihedral [deg]; drives PLN_Dihedral_HT tilt (0 = flat, on Top Plane)
 "b_semi_HT_proj"        = "b_semi_HT" / cos("dihedral_HT" * pi/180)   'HT SPAR TIP: in-plane spanwise dist from Origin on PLN_Dihedral_HT [mm]
-"dihedral_VT"    = 0         'VT fin cant [deg]; drives PLN_Dihedral_VT tilt (0 = in Right Plane)
 "h_VT_tip"              = "h_tail_top" + "b_VT"   'VT fin-top height above waterline [mm] = fin base + fin height
-"h_VT_root_proj"        = "h_tail_top" / cos("dihedral_VT" * pi/180)   'VT SPAR ROOT: in-plane height from Origin on PLN_Dihedral_VT [mm]
-"h_VT_tip_proj"         = ("h_tail_top" + "b_VT") / cos("dihedral_VT" * pi/180)   'VT SPAR TIP: in-plane height from Origin on PLN_Dihedral_VT [mm]
 ```
 ---
 ### After entering

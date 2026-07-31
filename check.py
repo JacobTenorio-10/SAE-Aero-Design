@@ -29,14 +29,13 @@ import sys
 # ---- baselines ----------------------------------------------------------
 HASH_HEADERS_SKELETON = 25      # count of ^#{3,} in the SKELETON guide
 H2_SKELETON           = 15      # count of ^## in the SKELETON guide
-GLOBAL_COUNT          = 223     # definitions in skeleton_equations_micro.txt
+GLOBAL_COUNT          = 239     # definitions in skeleton_equations_micro.txt
 
-# Globals allowed to hold a negative value. Everything else is a distance or
-# a magnitude and must be positive - direction belongs to the sketch, not the
-# global. Angles are the only legitimate exception.
-NEGATIVE_ALLOWED = {"i_HT", "twist_tip", "sweep_LE", "sweep_HT", "sweep_VT",
-                    "dihedral", "dihedral_HT", "dihedral_VT", "thrust_down",
-                    "thrust_side", "i_wing"}
+# THE POSITIVE-MAGNITUDE RULE: no value in the equations file may be negative,
+# angles included. Direction belongs to the model (dimension side, plane Flip,
+# pattern arrow), never to a stored sign. There are no exemptions -- do not add
+# one here to silence a failure; fix the value and carry the direction in the
+# geometry instead. A minus OPERATOR inside a formula is fine.
 
 # Convention violations. The model stores aft distances as positive magnitudes
 # on the -Z side; this wording contradicts that and must never appear.
@@ -142,8 +141,10 @@ def main():
     r.check(not undef, f"no undefined globals in RHS expressions{'' if not undef else ': ' + ', '.join(undef)}")
 
     # sign convention: distances are positive magnitudes
-    neg = [n for n, rhs in defs if rhs.startswith("-") and n not in NEGATIVE_ALLOWED]
-    r.check(not neg, f"no negative distance globals{'' if not neg else ': ' + ', '.join(neg)}")
+    neg = [n for n, rhs in defs if rhs.lstrip().startswith("-")]
+    r.check(not neg,
+            "positive-magnitude rule: no negative values"
+            + ("" if not neg else f" -- {len(neg)} found: " + ", ".join(neg)))
 
     # ---- 2. markdown files: encoding + line endings ------------------------
     for f in MD_FILES:

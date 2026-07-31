@@ -155,7 +155,7 @@ Rename **every** feature the moment you create it — slow-double-click it in th
 
 | Feature type | Prefix | Examples |
 |---|---|---|
-| Layout sketches | `LAY_` | `LAY_Front_View` (Front Plane), `LAY_Side_Profile` (Right Plane), `LAY_Wing_Plan` (Top Plane), `LAY_HTail_Plan`, `LAY_Payload`, `LAY_Gear` |
+| Layout sketches | `LAY_` | `LAY_Front_View` (Front Plane), `LAY_Side_Profile` (Right Plane), `LAY_Wing_Plan` (Top Plane — fuselage & CG only), `LAY_Wing_Incidence` (`PLN_Incidence` — the whole wing), `LAY_HTail_Incidence` (`PLN_Incidence_HT` — the whole stabilizer), `LAY_VT_Spar` (Right Plane), `LAY_Payload`, `LAY_Gear` |
 | Reference planes | `PLN_` | `PLN_RibStn_R01`…, `PLN_Thrust`, `PLN_PropDisk` |
 | Reference axes | `AX_` | `AX_MainSpar`, `AX_Thrust`, `AX_Prop`, `AX_GearAxle`, `AX_WingJoiner` |
 | Reference points | `PT_` | `PT_CG_loaded`, `PT_CG_drained`, `PT_CG_fwd`, `PT_CG_aft`, `PT_Drain`, `PT_ArmPlug`, `PT_Switch`, `PT_Ballast` |
@@ -231,6 +231,11 @@ You won't *create* the frame from scratch — a new part already has the Origin 
 2. Choose **Two Planes**; select the **Top Plane** and the **Right Plane** (their intersection *is* the Z axis).
 3. OK → rename to `AX_Long`.
 
+**2.3.1 — Create the empennage longitudinal axis (`AX_Long_Emp`).** The tail does not hang off the wing-root waterline — it rides the boom, `y_emp_axis` = 25 mm **above** the Top Plane. Give it its own datum so the whole empennage moves as one when that height changes.
+1. **Insert ▸ Reference Geometry ▸ Plane**: **First Reference** = the **Top Plane**, **Offset Distance** `= "y_emp_axis"`, flipped so it sits **above** ($+Y$). Green-check; **F2** → `PLN_Emp_Datum`. Drop it into `1_DATUMS`.
+2. **Insert ▸ Reference Geometry ▸ Axis**, **Two Planes**: select `PLN_Emp_Datum` and the **Right Plane**. Green-check; **F2** → `AX_Long_Emp`. File it in `1_DATUMS`.
+> **What it is.** A fore-aft line at $X = 0$, $Y = $ `y_emp_axis` — parallel to `AX_Long` and 25 mm above it. **Every empennage feature pivots on or attaches to `AX_Long_Emp`, never `AX_Long`.** The wing keeps `AX_Long`. Change `y_emp_axis` and the horizontal stabilizer, its datum planes and its spar all translate together; nothing on the wing moves.
+
 **2.4 — Create the master coordinate system (`CSYS_Master`).** A named, exportable datum and a clean mate target for downstream parts, mass properties, and FEA.
 1. **Insert ▸ Reference Geometry ▸ Coordinate System**.
 2. **Origin:** click the part **Origin**.
@@ -249,10 +254,10 @@ You won't *create* the frame from scratch — a new part already has the Origin 
 
 **2.8 — Verify and lock.** Before drawing any geometry, confirm:
 - Triad reads X-port / Y-up / Z-forward (starboard = −X); `Ctrl+1` (Front) shows the nose.
-- `AX_Long` and `CSYS_Master` exist and are oriented correctly.
+- `AX_Long`, `AX_Long_Emp` and `CSYS_Master` exist and are oriented correctly; **Measure** `AX_Long_Emp` to `AX_Long` reports `y_emp_axis` = 25 mm.
 - `PLN_PropDisk` sits forward of the LE and **moves when you change `x_motor`** (test it, then undo).
 - `LAY_Datums` note states origin, axes, symmetry plane, and units.
-- `Ctrl-Q` rebuild is clean. Drop `CSYS_Master`, `AX_Long`, and `PLN_PropDisk` into the `1_DATUMS` tree folder (§1.6).
+- `Ctrl-Q` rebuild is clean. Drop `CSYS_Master`, `AX_Long`, `PLN_Emp_Datum`, `AX_Long_Emp`, and `PLN_PropDisk` into the `1_DATUMS` tree folder (§1.6).
 
 ---
 
@@ -316,6 +321,14 @@ If these match, the import and the equation graph are correct. If `MAC`/`y_MAC` 
 > - `y_motor_offset` `= 20` — motor/thrust-line height relative to the wing-root Origin (MMGS), carried as a **positive magnitude** like every other distance global in this model. The global gives the *distance*; **you** pick the *direction* when you dimension it — place the thrust point on the side of the Origin you want, then type the global bare. `0` runs the thrust line through the wing root. It decouples the thrust axis from the wing datum and is consumed by the side profile (§4.5), the front view (§6.6), the Ground Line (§6.7), and the authoritative prop-disk sketch (§7.3.5) — dimension it the same direction in all four or they will disagree on rebuild.
 > - `gear_h` `= "gear_h"` — axle height above the Ground Line tracks the tire radius, so the tire bottom stays **permanently flush** on the ground at any `wheel_main`.
 > - `prop_clear` `= "prop_clear"` — prop tip-to-ground clearance. Because the Ground Line is anchored `h_thrust` below the **thrust center** (§6.7), not the Origin, this stays valid for **any** `y_motor_offset`.
+
+> **⭐ THE POSITIVE-MAGNITUDE RULE — no value in `skeleton_equations_micro.txt` is ever negative.** Every global is a **magnitude**. Direction is carried by the model, never by a minus sign: by which side of a datum you place a **Smart Dimension**, by the **Flip** toggle on a reference plane, or by the direction arrow on a pattern or offset.
+>
+> This holds for **angles as well as distances**. `i_HT` = 2.0 is a *magnitude*; the stabilizer is nose-down because `PLN_Incidence_HT` is flipped that way (§5.8.1), not because the number is negative. Likewise `thrust_down`, `thrust_side`, `twist_tip`, `dihedral` and every `sweep_*`.
+>
+> **Why:** a sign buried in a global is invisible at the point of use. You read `= "i_HT"` in a dimension box and cannot tell which way it points; worse, flipping the geometry *and* the sign silently doubles the error. Directions belong where you can see them on screen. Formulas may of course contain a minus **operator** — `i_tip` `= "i_wing" - "twist_tip"` is fine — the rule governs stored **values**.
+>
+> Verify with `python3 check.py`, which fails the build on any negative value with no exemptions.
 
 > **⭐ THE ONE-VARIABLE RULE — every Smart Dimension takes exactly one global, never an expression.** If a dimension needs a computed value, the computation belongs in `skeleton_equations_micro.txt` as its own named global, and the **Modify** box gets `= "that_global"` and nothing else. No arithmetic, no `cos`/`tan`, no nested parentheses, no bare numbers typed into SolidWorks.
 >
@@ -541,27 +554,24 @@ The profile has **ten elements — six straight, four spline:**
 
 ---
 
-## 5. Planform layout — Top Plane (`LAY_Wing_Plan`)
+## 5. Fuselage planform & mass datums — Top Plane (`LAY_Wing_Plan`)
 
-The most critical sketch for tying your lateral and longitudinal grids together. On the **Top Plane**, **span runs along $X$, chord/length runs along $Z$**. You draw the port half (the $+X$ side) of both the wing and the fuselage outline, then mirror them across the center axis.
+> **⭐ The wing and the horizontal stabilizer are *not* in this sketch.** Both are lifting panels that carry dihedral, so each lives entirely on its own tilted datum plane: the wing in **`LAY_Wing_Incidence`** on `PLN_Dihedral` (§7.2), the stabilizer in **`LAY_HTail_Incidence`** on `PLN_Dihedral_HT` (§5.8.1). Each of those sketches carries its own outline, spars, stations and hinge lines together, so they cannot drift apart. `LAY_Wing_Plan` keeps only what is genuinely flat and on the centreplane: the fuselage footprint, the vertical-tail reference, and the CG band.
+
+On the **Top Plane**, **span runs along $X$, chord/length runs along $Z$**. You draw the port half (the $+X$ side) of the fuselage outline, then mirror them across the center axis.
 
 **5.1 — Open and orient the canvas.**
 1. Select the **Top Plane** in the FeatureManager tree ▸ **Sketch** ▸ **Normal To** (`Ctrl+8`).
 2. Note your orientation: $+X$ is port span, $+Z$ is forward (toward the nose), and $-Z$ is aft (toward the tail).
 
-**5.2 — Establish master centerlines and root chord.**
+**5.2 — Establish the master centerline.**
 1. **Fuselage centerline.** Select the **Centerline** tool. Draw a line straight through the sketch **Origin** along the **$Z$-axis**. Add a **Coincident** relation to the Origin and a **Vertical** relation (or **Horizontal**, depending on screen rotation) to lock it as your $X = 0$ symmetry line.
-2. **Wing root chord line.** Select the standard, solid **Line** tool.
-   - Hover over the sketch **Origin** $(0,0,0)$ until the yellow coincident glyph appears, and click to start the line. This pins your wing-root **leading edge (root LE)** permanently to your longitudinal datum.
-   - Drag the cursor straight **aft** ($-Z$, the tail direction) and click to drop the endpoint — the root **trailing edge (root TE)**. Press **`Esc`**.
-   - Select the root chord line, hold **`Ctrl`**, click your fuselage centerline, and add a **Collinear** relation.
-   - Select **Smart Dimension**, click the root chord line, and type `= "c_root"`.
+2. **Wing root chord line — not here.** The wing root chord is the first entity of `LAY_Wing_Incidence` (§7.2 Phase B, Step 1), drawn from the Origin on `PLN_Dihedral`.
 
-**5.3 — Build the wing half-planform (port).**
-1. **Tip station fence post.** Select the **Point** tool. Click out on the $+X$ (port) side of the screen. Use **Smart Dimension** to measure the horizontal distance from this point to your fuselage centerline; type `= "b_semi"`.
-2. **Tip LE position (straight wing).** Select the solid **Line** tool. Click the **Origin (root LE)** and connect it straight to your tip station point. Click this new leading-edge line and add a **Horizontal** relation to lock it flat across the screen (constant $Z$, pure spanwise line).
-3. **Tip chord.** Select the solid **Line** tool. Click directly on the tip LE point, drag straight **aft** ($-Z$), and click to drop the tip TE endpoint. Select this tip chord line, hold **`Ctrl`**, click the fuselage centerline, and add a **Parallel** relation. **Smart Dimension** the line to `= "c_tip"`.
-4. **Close the panel.** Select the solid **Line** tool and connect the tip TE point back to your root TE point to seal your half-panel loop. The profile shades a light blue tint, turning fully black (Fully Defined).
+> **Where the wing went.** Every wing entity that used to be sketched on this plane — root chord, swept leading edge, tip chord, trailing edge, both spars, the joiner, the rib array, the MAC line, the four control-surface stations and both hinge lines — is now in `LAY_Wing_Incidence`. The flat versions are **gone, not duplicated**: re-drawing them here would over-constrain the model against the tilted originals and give you two wings that disagree the moment `dihedral` changes.
+
+
+**5.3 — Wing half-planform → moved to `LAY_Wing_Incidence` (§7.2 Phase B).** The port wing panel, its swept leading edge, the tip station and the closing trailing edge are now drawn on `PLN_Dihedral` so the outline is a true 3-D shape rather than a flat projection. Nothing wing-related is sketched on the Top Plane. Continue at §5.3.5 for the fuselage cage.
 
 **5.3.5 — Draft the fuselage planform "trapping cage" (native 12-sided dodecagon).** To give §8.5 a stable framework to pierce against, lay out the horizontal envelope of the fuselage independently of the wing — a **12-sided dodecagon** that mirrors the side profile's $Z$ columns exactly. You sketch the **port (+X) half** as an open chain that **runs from the centerline at the nose to the centerline at the tail** — drawing the two half-width flat faces explicitly — then mirror it across the centerline so those halves weld into the full nose and tail faces. **Every line in this subsection must be checked "For construction".**
 
@@ -614,70 +624,58 @@ Two more vertices sit **on the centerline** ($X = 0$) as the mirror seam: **`NC`
 3. Click inside **Mirror About**, select the main longitudinal **$Z$ centerline** ($X = 0$), confirm **Copy** is ticked, and click the **Green Checkmark**. Each flat-face half welds to its mirror at the seam point — `NC → NL` joins `NC → NR` into the full **nose face**, and `SL_P → SL_C` joins `SL_R → SL_C` into the full **sleeve end face** — closing the footprint with no gap. The mirrored sleeve reads as a constant-width box $2 \times$ `w_fuse_sleeve_half` $= 19.05$ mm across, running 1 in aft of the tail station.
 4. Confirm the whole fuselage footprint reads **Fully Defined** — every segment **solid black**. A blue vertex means a missing $Z$ or $X$ dimension (Phases 2–3), or a flat face missing its **Vertical** relation; add the missing constraint, not a stray one.
 
-**5.4 — Map the reference spar and joiner lines.**
-1. **Main spar centerline.** Select the **Line** tool and check **For construction**. Click directly on your solid root chord line, drag outboard, and click on your solid tip chord line. **Smart Dimension** the inboard endpoint to the Origin along $Z$ `= "x_spar_root"`; dimension the outboard endpoint to the tip LE point along $Z$ `= "x_spar_tip"`.
-2. **Rear spar centerline.** Draw another construction line outboard from root to tip behind the main spar. Dimension its inboard endpoint to the Origin along $Z$ `= "x_rspar_root"`; dimension its outboard endpoint to the tip LE along $Z$ `= "x_rspar_tip"`.
-3. **Wing joiner axis line.** Draw a construction line starting directly on your vertical fuselage centerline ($X = 0$), running horizontally outboard. Give it a **Horizontal** relation to keep it square, and **Smart Dimension** its axial distance from the Origin along $Z$ to exactly `= "x_joiner_root"`.
-
-**5.5 — Array the rib stations.**
-1. Select the **Point** tool and drop a single seed point directly on your **main spar** construction line.
-2. **Smart Dimension** the horizontal distance from this seed point to the central fuselage centerline; type `= "rib_root_off"`.
-3. Select the point, then click **Linear Sketch Pattern**.
-   - Under **Direction 1**, click inside the selection box and select your slanted **main spar line** as the pattern axis (untick *Fix X-axis direction* if prompted).
-   - Input raw placeholder numbers for the parameters: set spacing to `50` and instances to `2`.
-   - Check **Dimension X spacing** and **Display instance count**, then click the green checkmark.
-4. Double-click the on-screen placeholder spacing dimension and change it to `= "rib_pitch"`. Double-click the on-screen instance count and change it to `= "n_rib"`.
-5. Hold **`Ctrl`**, select the second patterned point and the main spar line, and add a **Coincident** relation to permanently lock the array to the spar axis.
-
-**5.6 — Map the MAC reference and stability CG band.**
-1. **MAC reference line.** Select the **Line** tool (**For construction**). Draw a line running parallel to the fuselage centerline out on the port panel. Give it a **Vertical** relation. **Smart Dimension** its distance from the fuselage centerline to `= "y_MAC"`.
-2. **Mark MAC reference points.** Drop three independent points on this MAC line. Use **Smart Dimension** to link them back to the **Origin** along the longitudinal $Z$ axis:
-   - Leading-edge point → `= "x_MAC_LE"`
-   - Quarter-chord ($c/4$) point → `= "x_MAC_c4"`
-   - Total chord length → dimension the gap between point 1 and point 3 to `= "MAC"`
+**5.6 — Map the stability CG band.** The MAC reference line moved to `LAY_Wing_Incidence` (§7.2 Phase B, Step 6) with the rest of the wing; the CG band stays here, because these three points sit on the fuselage centerline at $X = 0$ and are mass datums rather than wing-panel geometry.
 3. **Establish the CG centerline band.** Drop three independent points directly on your main central fuselage centerline ($X = 0$). **Smart Dimension** their distance from the **Origin** along $Z$ to set your static limits:
    - Target CG point → `= "x_CG"`
    - Forward CG margin limit → `= "x_CG_fwd"`
    - Aft CG margin limit → `= "x_CG_aft"`
 
-**5.8 — Map out the empennage planforms.**
-1. **Horizontal tail (HT).** Select the solid **Line** tool. Click on the fuselage centerline far aft of your wing to sketch the root chord line. Lock it **Collinear** to the centerline, dimension its length to `= "c_root_HT"`, and dimension its leading-edge point back to the master **Origin** to `= "x_HT_LE_root"`.
-2. Drop a floating point out to the side and dimension its horizontal span distance to the centerline to `= "b_semi_HT"`. Connect the HT leading edge from the centerline root to this tip point, adding a **Horizontal** relation for a straight tail. Draw the tip chord line running aft, make it **Parallel** to the centerline, and dimension its length to `= "c_tip_HT"`. Close the loop back to the root trailing edge.
-3. **Vertical tail (VT).** Select the **Centerline** tool. Draw a line directly on the main fuselage centerline near the tail apex. Ensure it is **Collinear**, dimension its length to `= "c_root_VT"`, and dimension its forward endpoint back to the master **Origin** to `= "x_VT_LE_root"`.
+**5.8 — Map out the vertical-tail reference.** The **horizontal** stabilizer is no longer sketched here — outline and spar together live in `LAY_HTail_Incidence` (§5.8.1). Only the VT reference, whose span runs vertically and therefore has no dihedral plane of its own, stays on the Top Plane.
+1. **Vertical tail (VT).** Select the **Centerline** tool. Draw a line directly on the main fuselage centerline near the tail apex. Ensure it is **Collinear**, dimension its length to `= "c_root_VT"`, and dimension its forward endpoint back to the master **Origin** to `= "x_VT_LE_root"`.
 
-**5.8.1 — Reference spar line for the horizontal tail (port).** The HT loft (§8.6) needs a true spanwise datum, exactly as the wing loft rides `AX_MainSpar_3D`. Lay its 2-D seed here, mirroring the §5.4 wing-spar recipe on the horizontal-tail planform you just drew.
-1. Select the **Line** tool and check **For construction**. Click on your HT **root chord line**, drag outboard, and click on your HT **tip chord line**. Press **`Esc`**.
-2. **Smart Dimension** the inboard endpoint to the HT root **leading-edge** point along $Z$ to `= "x_spar_root_HT"`; dimension the outboard endpoint to the HT tip **leading-edge** point along $Z$ to `= "x_spar_tip_HT"`.
-   > **Why `spar_main_pct` (no dedicated tail-spar global).** The stabilizer spar is co-located at the **same %-chord fraction** as the wing main spar, so it re-uses an existing global with zero new entries — Appendix A stays byte-identical. The elevator hinge lives further aft at `(1 - "c_elev_pct")` of chord, so a 25 % spar clears the `c_elev_pct` = 0.35 elevator cleanly. If structures wants the tail spar elsewhere, add a dedicated `spar_HT_pct` global and swap both dimensions to it — the revert path is these two lines only.
-3. Leave this line **port-only** — do **not** mirror it. Like `AX_MainSpar`, the axis rides the single port line; §5.9's mirror touches only the HT *outline*, never this spar.
+**5.8.1 — Empennage datum chain (`PLN_Dihedral_HT` → `PLN_Incidence_HT`) → the complete stabilizer sketch (`LAY_HTail_Incidence`).** The horizontal tail gets the same two-plane treatment as the wing, but hung off `AX_Long_Emp` rather than `AX_Long` — the tail rides the boom, `y_emp_axis` = 25 mm above the Top Plane. This replaces the old flat HT outline in `LAY_Wing_Plan` and the retired `LAY_HTspar_Dihedral`.
 
-**5.8.2 — Tilted HT datum plane (`PLN_Dihedral_HT`) → true 3-D spar axis (`AX_HTspar_3D`).** Build the tail's spar datum exactly like the wing's (§7.2): tilt a dedicated plane to the HT dihedral and draw the spar on it, so the spar and every §7.3.7 section plane live in one plane. The HT starts flat (`dihedral_HT` = 0, `sweep_HT` = 0), so at rest the plane sits on the Top Plane — but the tilt is parametric, so setting an HT dihedral later re-tilts the spar and every downstream plane for free.
-* **Phase A — create `PLN_Dihedral_HT`.**
-  1. Click **Insert ▸ Reference Geometry ▸ Plane**. **First Reference —** the **Top Plane**; **Second Reference —** `AX_Long` (§2.3), the fore-aft pivot the HT shares with the wing. Choose **At Angle** and type `= "dihedral_HT"`.
+* **Phase A — create `PLN_Dihedral_HT` (the roll plane).**
+  1. Click **Insert ▸ Reference Geometry ▸ Plane**. **First Reference —** `PLN_Emp_Datum` (§2.3.1, the horizontal plane at `y_emp_axis`); **Second Reference —** **`AX_Long_Emp`**, the fore-aft pivot the empennage uses. Choose **At Angle** and type `= "dihedral_HT"`.
   2. **Flip** so the plane rises toward the port (**+X**) HT tip. Green-check; **F2** → `PLN_Dihedral_HT`. Drop it into `3C_TAIL_PLANES`.
-  > At `dihedral_HT` = 0 the plane is coincident with the Top Plane — correct for the flat starter HT. Every point on it obeys $Y = X\tan(dihedral\_HT)$, so the spar drawn below inherits any future HT dihedral with no hard $Y$ number.
-* **Phase B — draw the HT spar (`LAY_HTspar_Dihedral`).**
-  1. **Insert ▸ Sketch** on `PLN_Dihedral_HT`; **F2** → `LAY_HTspar_Dihedral`. Press **`L`**, tick **For construction**, draw a rough line from the HT root outboard to the port ($+X$) tip.
-  2. **Root end —** **Coincident** to `AX_Long` (pins $X = 0$), then **Smart Dimension** its $Z$ to the **Front Plane** `= "x_HT_spar_root"` on the aft ($-Z$) side.
-  3. **Tip end —** spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "b_semi_HT_proj"` — the same tilted-sketch projection rule as the wing spar (§7.2), so at any `dihedral_HT` the tip still lands at the projected $X = $ `b_HT`$/2$. Distance to the **Front Plane** `= "x_HT_spar_tip"` on the aft ($-Z$) side. The plane supplies $Y$.
-  4. Confirm `LAY_HTspar_Dihedral` reads **fully black**; **Exit** the sketch.
+  > At `dihedral_HT` = 0 this plane is coincident with `PLN_Emp_Datum` — a flat stabilizer sitting 25 mm up. Every point on it obeys $Y = $ `y_emp_axis` $+\,X\tan(dihedral\_HT)$, so the tail inherits any future HT dihedral with no hard $Y$ number, and it translates bodily with `y_emp_axis`.
+
+* **Phase A2 — the pitch pivot and `PLN_Incidence_HT` (the incidence plane).** The stabilizer really does carry incidence — `i_HT` = −2.0°, i.e. the chord line sits **2° below** `AX_Long_Emp`, nose-down — so this second plane is load-bearing here, not just provision.
+  1. **Root-LE station plane.** **Insert ▸ Reference Geometry ▸ Plane**: **First Reference** = the **Front Plane**, **Offset Distance** `= "x_HT_LE_root"`, flipped **aft** ($-Z$). Green-check; **F2** → `PLN_HT_LE`. Drop it into `3C_TAIL_PLANES`.
+  2. **Pitch pivot.** **Insert ▸ Reference Geometry ▸ Axis**, **Two Planes**: select `PLN_Dihedral_HT` and `PLN_HT_LE`. Green-check; **F2** → `AX_Pitch_HT`. File it in `4_AXES`.
+     > **Why the pivot must sit at the HT root LE.** Incidence is a pitch rotation, so whatever station the hinge line crosses stays put and everything else swings. Pivot at the Front Plane instead and the root LE would drop `x_HT_LE_root` $\times \tan$ `i_HT` $\approx 29.6$ mm off the boom axis — a 30 mm error masquerading as a 2° one.
+  3. **Incidence plane.** **Insert ▸ Reference Geometry ▸ Plane**. **First Reference —** `PLN_Dihedral_HT`; **Second Reference —** `AX_Pitch_HT`. Choose **At Angle** and type `= "i_HT"` — a **positive 2.0**, per the positive-magnitude rule (§3).
+     **Now set the direction with the Flip toggle, not with a sign.** Watch the preview and tick **Flip Offset** until, running **aft** ($-Z$) from the pivot, the plane **climbs away from `AX_Long_Emp`**. That is the nose-**down** stabilizer: the chord line sits 2° below the boom axis in attitude, leading edge low, trailing edge high. Green-check; **F2** → `PLN_Incidence_HT`. Drop it into `3C_TAIL_PLANES`.
+  > **Check it before you sketch on it.** **Measure** the angle between `PLN_Incidence_HT` and `PLN_Emp_Datum` — it must read **2.00°**. Then **Measure** the $Y$ of a point on the plane one root chord aft of the pivot: it must be **higher** than the pivot by `c_root_HT` $\times \sin$ `i_HT` $\approx 6.2$ mm. If it is lower, the Flip is backwards — you have built a nose-**up** stabilizer, a 4° error in tail setting angle and the difference between trimmed and untrimmable. **Fix it with the Flip toggle; do not make `i_HT` negative.**
+
+* **Phase B — draw the complete stabilizer (`LAY_HTail_Incidence`).** Same two-projection rule as the wing (§7.2 Phase B): **spanwise** distances use the `_proj` family, **chordwise** station distances use the `_inc` family, and **line lengths are drawn true**.
+  1. **Insert ▸ Sketch** on **`PLN_Incidence_HT`**; **`Ctrl + 8`**; **F2** → `LAY_HTail_Incidence`.
+  2. **Root LE.** Select the **Point** tool and drop a point; add a **Coincident** to `AX_Pitch_HT` and a second **Coincident** to the **Right Plane**. That pins it at $X = 0$ on the pitch hinge — the HT root leading edge, exactly `x_HT_LE_root` aft of the Front Plane and exactly on `AX_Long_Emp`. **No chordwise dimension is needed here**; the pivot axis supplies it.
+     > At non-zero `dihedral_HT` the Right Plane is no longer perpendicular to this sketch — swap that second Coincident for an in-plane spanwise dimension of `0` from `AX_Pitch_HT`.
+  3. **Root chord.** Solid **Line** from the root LE point running **aft**; **Smart Dimension** its length `= "c_root_HT"` (a true in-plane length). Add a **Perpendicular** relation to `AX_Pitch_HT` so the chord runs square to the span.
+  4. **Tip station.** **Point** tool, out on the port side; **Smart Dimension** its in-plane spanwise distance **from the root LE** → `= "b_semi_HT_proj"`.
+  5. **Leading edge.** Solid **Line** from the root LE to the tip station point. With `sweep_HT` = 0 add a **Perpendicular** relation to the root chord to lock it square. (For non-zero `sweep_HT`, drop that relation and dimension the tip LE in-plane chordwise from the root LE instead, exactly as the wing does with `x_LE_tip_inc`.)
+  6. **Tip chord.** Solid **Line** from the tip LE straight aft; **Parallel** to the root chord; **Smart Dimension** `= "c_tip_HT"`.
+  7. **Trailing edge.** Solid **Line** closing tip TE back to root TE.
+  8. **HT main spar (construction).** **Line** tool, tick **For construction**, root chord to tip chord. **Root end —** **Coincident** to the root chord line, then **Smart Dimension** its in-plane chordwise distance **from the root LE** `= "x_spar_root_HT_inc"`. **Tip end —** in-plane spanwise from the root LE `= "b_semi_HT_proj"`, and in-plane chordwise **from the tip LE** `= "x_spar_tip_HT_inc"`.
+     > **Why `spar_main_pct` (no dedicated tail-spar global).** The stabilizer spar is co-located at the **same %-chord fraction** as the wing main spar, so `x_spar_root_HT` / `x_spar_tip_HT` re-use an existing fraction rather than introducing a second one. The elevator hinge line is a separate downstream feature at `c_elev_pct`.
+  9. **Mirror the outline only.** **Mirror Entities** ▸ select the **LE, tip chord and TE** ▸ **Mirror About** = the **root chord line** ▸ **Copy** ticked ▸ green-check. Leave the **spar port-only** — like `AX_MainSpar`, the axis rides the single port line.
+  10. Confirm `LAY_HTail_Incidence` reads **fully black**; **Exit** and drag it into `2_LAYOUT_SKETCHES`.
+
 * **Phase C — promote to `AX_HTspar_3D`.**
-  1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the `LAY_HTspar_Dihedral` line, green-check, **F2** → `AX_HTspar_3D`. File it in `4_AXES` (§7.2) and the sketch in `2_LAYOUT_SKETCHES`.
-  > **Success state:** a single named axis spanning the HT semi-span ($X = $ `b_HT`$/2$), the **Normal to Curve** reference §7.3.7 slices against — now flowing from `PLN_Dihedral_HT`, so an HT dihedral needs only the `dihedral_HT` global.
+  1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the HT spar construction line inside `LAY_HTail_Incidence`, green-check, **F2** → `AX_HTspar_3D`. File it in `4_AXES` (§7.2).
+  > **Success state:** one sketch holds the whole stabilizer, sitting `y_emp_axis` above the wing datum and pitched `i_HT` nose-down, with a single named axis spanning the HT semi-span — the **Normal to Curve** reference §7.3.7 slices against. Changing `y_emp_axis`, `dihedral_HT` or `i_HT` re-solves the outline and the spar together, because they share a sketch and a datum chain.
 
-**5.8.3 — Prep the vertical-tail framework.** The VT root chord from step 3 (`= "c_root_VT"`, on the centerline) is the *planform* footprint of the fin. Its span runs **vertically** ($+Y$), so its height master (`= "b_VT"`) and its 3-D fin-spar axis are built next door on the front view — see **§6.8.1**. No further action on the Top Plane.
 
-**5.9 — Mirror and harden the entire sketch.**
-1. Click **Mirror Entities** on the Sketch tab.
-2. In the **Entities to Mirror** box, box-select your port wing panel lines and your horizontal-tail outline. Do *not* select your centerlines, the VT reference line, or the fuselage cage — its twelve-sided footprint was already mirrored and closed in §5.3.5.
-3. Click inside the **Mirror About** box, select your main **longitudinal $Z$ centerline**, and confirm *Copy* is checked. Click the green checkmark.
-4. Verify your status bar reads **Fully Defined** and every item on screen has turned **solid black**. Click the exit arrow in the confirmation corner.
+**5.8.3 — Prep the vertical-tail framework.** The VT root chord from §5.8 step 1 (`= "c_root_VT"`, on the centerline) is the *planform* footprint of the fin. Its span runs **vertically** ($+Y$), so its height master (`= "b_VT"`) and its 3-D fin-spar axis are built next door on the front view — see **§6.8.1**. No further action on the Top Plane.
+
+**5.9 — Harden the sketch.** There is nothing left to mirror here — the fuselage dodecagon was already mirrored and closed in §5.3.5 Phase 4, and the wing and stabilizer are mirrored inside their own sketches (§7.2 Phase B Step 9, §5.8.1 Phase B Step 8).
 
 **5.10 — Rename, file, and flex-test the system.**
-1. Slow-double-click the sketch in your FeatureManager tree and rename it exactly `LAY_Wing_Plan`. Drag it into your `2_LAYOUT_SKETCHES` organization folder.
+1. Slow-double-click the sketch in your FeatureManager tree and rename it exactly `LAY_Wing_Plan`. Drag it into `2_LAYOUT_SKETCHES`, alongside `LAY_Wing_Incidence` and `LAY_HTail_Incidence`.
 2. Open your external variables file (`skeleton_equations_micro.txt`) in Notepad to perform your mandatory validation audit.
 3. Alter your primary design drivers by $+10\%$: set `"b" = 1210` and `"c_tip" = 198`, save the text file, and hit **Forced Rebuild** (**`Ctrl + Q`**) inside SolidWorks.
-4. **Audit the screen:** the wing planform must scale smoothly, your spars must automatically re-angle to hold their exact chordwise percentages, your rib-point pattern must re-space across the longer span, and your new fuselage cage must expand laterally while its nose and tail flat faces stay anchored firmly to the centerline.
+4. **Audit the screen:** in `LAY_Wing_Incidence` the panel must scale smoothly, the spars must re-angle to hold their exact chordwise percentages, and the rib-point pattern must re-space across the longer span; in `LAY_HTail_Incidence` the stabilizer must resize with the tail-volume chain; and here the fuselage cage must expand laterally while its nose and tail flat faces stay anchored firmly to the centerline.
 5. **Test the re-count engine:** change `"n_rib" = 9`, save, and hit **`Ctrl + Q`**. Verify the rib array adds two new points with zero errors.
 6. Revert all variables to your baseline competition metrics, save the text file, run a final **`Ctrl + Q`**, and save your model.
 
@@ -858,21 +856,22 @@ The vertical stabilizer (the fin) projects straight up from the top spine of the
 10. Pull the cursor out to the left or right clear of the geometry, **click once** to drop the text box, type exactly `= "b_VT"`, and press **Enter**.
 > **Success state:** the centerline turns entirely **black** and carries the **Σ** equation marker. The top apex of this line now serves as the authoritative height master for your vertical stabilizer.
 
-**6.8.1 — Tilted VT datum plane (`PLN_Dihedral_VT`) → true 3-D fin-spar axis (`AX_VTspar_3D`).** The fin is the one surface whose **span runs vertically** — along $+Y$ — and, because `sweep_VT` = 20°, its spar rakes **aft** ($-Z$) as it climbs. Build it the wing's way (§7.2): a dedicated fin datum plane the spar is drawn on directly, replacing the old bridging 3-D sketch. For a centreline fin the plane sits in the Right Plane; `dihedral_VT` tilts it for fin **cant** if you ever want it (default 0).
-* **Phase A — create `PLN_Dihedral_VT`.**
-  1. Click **Insert ▸ Reference Geometry ▸ Plane**. **First Reference —** the **Right Plane** ($X = 0$); **Second Reference —** `AX_Long` (§2.3), the fore-aft pivot. Choose **At Angle** and type `= "dihedral_VT"`.
-  2. Green-check; **F2** → `PLN_Dihedral_VT`. Drop it into `3C_TAIL_PLANES`.
-  > At `dihedral_VT` = 0 the plane is coincident with the **Right Plane** — the normal single-fin case. A non-zero `dihedral_VT` cants the fin about the fore-aft centerline; if you need cant hinged at the fin base instead, root the pivot there rather than on `AX_Long`.
-* **Phase B — draw the fin spar (`LAY_VTspar_Dihedral`).**
-  1. **Insert ▸ Sketch** on `PLN_Dihedral_VT`; **F2** → `LAY_VTspar_Dihedral`. Press **`L`**, tick **For construction**, draw a rough line climbing up-and-aft.
-  2. **Root end (fin base) —** **Smart Dimension** its height **from the Origin** (in-plane, along the plane's vertical) `= "h_VT_root_proj"` — same projection rule as the wing spar (§7.2), landing the base at the true $Y = $ `h_tail_top` at any cant. To the **Front Plane** `= "x_VT_spar_root"` on the aft ($-Z$) side.
-  3. **Tip end (fin top) —** height **from the Origin** `= "h_VT_tip_proj"` (projecting to $Y = $ `h_tail_top` $+$ `b_VT`), and to the **Front Plane** `= "x_VT_spar_tip"` on the aft ($-Z$) side.
+**6.8.1 — Fin-spar sketch (`LAY_VT_Spar`) → true 3-D fin-spar axis (`AX_VTspar_3D`).** The fin is the one surface whose **span runs vertically** — along $+Y$ — and, because `sweep_VT` = 16.70°, its spar rakes **aft** ($-Z$) as it climbs. It needs **no tilted datum plane**: the vertical stabilizer is always perfectly vertical, so it lives in the **Right Plane** ($X = 0$) and every dimension is an ordinary in-plane distance.
+
+> **No cant, by design.** The wing and stabilizer each need tilted planes because they carry dihedral and incidence; the fin carries neither. There is no `dihedral_VT` global, no `PLN_Dihedral_VT` plane, and no $1/\cos$ projection anywhere in the fin chain — the Right Plane *is* the fin plane, so `h_tail_top` and `h_VT_tip` are dimensioned straight to the waterline with no correction. If a canted or V-tail configuration is ever adopted, that is a new surface layer, not a parameter change here.
+
+* **Phase A — draw the fin spar (`LAY_VT_Spar`).**
+  1. Select the **Right Plane** ▸ **Insert ▸ Sketch**; press **`Ctrl + 8`** (Normal To); **F2** → `LAY_VT_Spar`. Orientation: $+Y$ up, $+Z$ forward, $-Z$ aft.
+  2. Press **`L`**, tick **For construction**, and draw a rough line climbing up-and-aft.
+  3. **Root end (fin base) —** **Smart Dimension** its height to the **waterline** ($Y = 0$) `= "h_tail_top"`, and its distance to the **Front Plane** `= "x_VT_spar_root"` on the aft ($-Z$) side.
+  4. **Tip end (fin top) —** height to the waterline `= "h_VT_tip"`, and distance to the **Front Plane** `= "x_VT_spar_tip"` on the aft ($-Z$) side.
   > **The tip $Z$ term is the sweep rake.** `b_VT * tan(sweep_VT)` is how far the swept spar walks aft over the full fin height — the vertical analog of the wing's spanwise sweep offset. Store `sweep_VT` in degrees; `* pi/180` converts inside the expression (§14 item 5).
-  4. Confirm `LAY_VTspar_Dihedral` reads **fully black**; rotate to isometric and verify it climbs in $+Y$ while raking aft in $-Z$. **Exit**.
-     > **Fin-root seat (flag).** `h_tail_top` seats the fin on the aft crown. If the fin should root further forward on the spine — where the hull is taller — swap both `h_tail_top` references to `h_fuse_top` or a dedicated `y_VT_root` global; the §8.6 transform's base-height cell `K1` must match whatever you pick. Revert path: these two $Y$-dimensions plus cell `K1`.
-* **Phase C — promote to `AX_VTspar_3D`.**
-  1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the `LAY_VTspar_Dihedral` line, green-check, **F2**, rename `AX_VTspar_3D`. File it in `4_AXES` (§7.2) and the sketch in `2_LAYOUT_SKETCHES`.
-  > **Success state:** a single swept axis rising from the crown seat to $Y = $ `h_tail_top` $+$ `b_VT`, the reference §7.3.8 slices against. Do **not** confuse its $+Y$ span with the wing/HT $+X$ span — that mix-up is the §14 vertical-axis pitfall.
+  5. Confirm `LAY_VT_Spar` reads **fully black**; rotate to isometric and verify it climbs in $+Y$ while raking aft in $-Z$, and that it stays flat on $X = 0$. **Exit** and drag it into `2_LAYOUT_SKETCHES`.
+     > **Fin-root seat (flag).** `h_tail_top` seats the fin on the aft crown. If the fin should root further forward on the spine — where the hull is taller — swap `h_tail_top` for `h_fuse_top` or a dedicated `y_VT_root` global; `h_VT_tip` tracks it automatically, and the §8.6 transform's base-height cell `K1` must match whichever you choose.
+* **Phase B — promote to `AX_VTspar_3D`.**
+  1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the `LAY_VT_Spar` line, green-check, **F2**, rename `AX_VTspar_3D`. File it in `4_AXES` (§7.2).
+  > **Success state:** a single swept axis rising from the crown seat to $Y = $ `h_VT_tip`, the reference §7.3.8 slices against. Do **not** confuse its $+Y$ span with the wing/HT $+X$ span — that mix-up is the §14 vertical-axis pitfall.
+
 
 **6.9 — Mirror and fully define.**
 This is the final stabilization and hardening pass for the front-view layout. Any geometry representing a left/right paired feature (like the wing dihedral lines or landing-gear components) must be duplicated across the central vertical axis, and any lingering free movements must be locked down until the sketch is completely static.
@@ -994,12 +993,14 @@ This converts the layout sketches into the named, top-level references that down
 2. Right-click `LAY_Wing_Plan` and click the **Show** icon (the open eyeball).
 3. Right-click `LAY_Side_Profile` and click the **Show** icon.
 4. Right-click `LAY_Front_View` and click the **Show** icon.
+5. `LAY_Wing_Incidence` does not exist yet — it is created in item 5, Phase B below, and items 1 and 4 select lines from it, so build item 5 first and come back.
 
-**1. Wing spanwise axis (`AX_MainSpar`).**
+**1. Wing spanwise axis (`AX_MainSpar`).** Build this *after* Phase B below, since its source line now lives in `LAY_Wing_Incidence`.
+> **`AX_MainSpar` and `AX_MainSpar_3D` are now the same line.** The wing spar is only ever drawn once, on `PLN_Dihedral`, so there is no separate flat plan-view spar any more. Both axis names are kept and both are promoted from that one construction line, so every downstream reference — `AX_MainSpar` at §7.10 (bolt pierce), §9 (spar cutouts) and §13.3; `AX_MainSpar_3D` at §7.3 / §7.7 / §8 — keeps working unchanged. To carry a single axis instead, delete `AX_MainSpar` and repoint those three sections at `AX_MainSpar_3D`.
 1. Go to the top menu bar and click **Insert ▸ Reference Geometry ▸ Axis** (alternatively: on the **Features** tab of the CommandManager, click the **Reference Geometry** dropdown and select **Axis**).
 2. In the **Axis PropertyManager** on the left, under *Selection*, click the **One Line/Edge/Axis** radio button.
 3. Click inside the **Reference Entities** selection box to make it active.
-4. In the graphics window, click directly on the dashed **main-spar construction line** inside your `LAY_Wing_Plan` sketch.
+4. In the graphics window, click directly on the dashed **main-spar construction line** inside your `LAY_Wing_Incidence` sketch (Phase B, Step 4).
 5. Click the **Green Checkmark** ($\checkmark$) at the top of the left-hand panel.
 6. At the bottom of the FeatureManager tree, slow double-click the new `Axis1` feature (or select it and press **F2**), type `AX_MainSpar`, and press **Enter**.
 
@@ -1024,36 +1025,93 @@ This converts the layout sketches into the named, top-level references that down
 1. Click **Insert ▸ Reference Geometry ▸ Axis**.
 2. In the left-hand panel, click the radio button back to **One Line/Edge/Axis**.
 3. Click inside the **Reference Entities** selection box.
-4. In the graphics window, navigate to your wing-root area and click directly on the **spar-tube/joiner construction line** in your `LAY_Wing_Plan` sketch.
+4. In the graphics window, navigate to your wing-root area and click directly on the **spar-tube/joiner construction line** in your `LAY_Wing_Incidence` sketch (Phase B, Step 4).
 5. Click the **Green Checkmark** ($\checkmark$).
 6. Find the new axis feature at the bottom of your tree, press **F2**, and rename it to `AX_WingJoiner`.
 
-**5. Tilted structural datum plane (`PLN_Dihedral`) → true 3D spar axis (`AX_MainSpar_3D`).** The flat `AX_MainSpar` above lies in the plan view and carries **no dihedral**, so planes normal to it are only approximately square to the real spar. Rather than bridge a separate 3-D sketch, **tilt a dedicated structural datum plane to the dihedral angle and draw the spar directly on it** — the spar, and every rib plane that rides it, then lives in one plane in true 3-D, while `LAY_Wing_Plan` stays flat as the projected-planform source. No new global: the plane reuses `= "dihedral"`.
+**5. Tilted structural datum planes (`PLN_Dihedral` → `PLN_Incidence`) → the complete wing sketch (`LAY_Wing_Incidence`) → true 3D spar axis (`AX_MainSpar_3D`).** A flat plan-view spar carries **no dihedral**, so planes normal to it are only approximately square to the real spar. Rather than bridge a separate 3-D sketch, **tilt a dedicated structural datum plane to the dihedral angle and draw the spar directly on it** — the spar, and every rib plane that rides it, then lives in one plane in true 3-D, while `LAY_Wing_Plan` stays flat as the projected-planform source. No new global: the plane reuses `= "dihedral"`.
 
 * **Phase A — create the dihedral datum plane (`PLN_Dihedral`).**
   1. Click **Insert ▸ Reference Geometry ▸ Plane**.
   2. **First Reference —** click the **Top Plane** (the horizontal datum).
   3. **Second Reference —** click `AX_Long` (the §2.3 fore-aft centerline). SolidWorks switches to the **At Angle** option; type the angle `= "dihedral"`.
   4. Use the **Flip** toggle so the plane rises toward the port (**+X**) tip — the preview must climb in **+Y** as it runs out in **+X**. Green-check; **F2** → `PLN_Dihedral`. Drop it into `3_RIB_PLANES` with the wing grid it parents.
+
+* **Phase A2 — the pitch pivot and the incidence plane (`PLN_Incidence`).** Dihedral and incidence are two *different* rotations about two *different* axes, so they need two planes in series. `PLN_Dihedral` handles the roll; `PLN_Incidence` handles the pitch, and the wing sketch is drawn on **`PLN_Incidence`**.
+  1. **Pitch pivot.** **Insert ▸ Reference Geometry ▸ Axis**, **Two Planes**: select `PLN_Dihedral` and the **Front Plane**. Green-check; **F2** → `AX_Pitch_Wing`. File it in `4_AXES`.
+     > **Why the Front Plane.** The wing root LE *is* the Origin, which lies on the Front Plane, so their intersection line runs spanwise through the root LE — exactly the hinge an incidence rotation should turn about. Pitching about any other station would lift or drop the root LE off the Origin.
+  2. **Incidence plane.** **Insert ▸ Reference Geometry ▸ Plane**. **First Reference —** `PLN_Dihedral`; **Second Reference —** `AX_Pitch_Wing`. Choose **At Angle** and type `= "i_wing"`. Use **Flip** so a positive incidence pitches the **leading edge up** (the trailing edge drops in $-Y$ as it runs aft). Green-check; **F2** → `PLN_Incidence`. Drop it into `3_RIB_PLANES`.
+  > **At `i_wing` = 0 this plane is coincident with `PLN_Dihedral`** — the current wing, unchanged. The plane exists so that setting `i_wing` to any non-zero value rotates the entire wing sketch about the root LE with no other edit. That is the whole point: the wing is *ready* for incidence rather than needing a rebuild to accept it.
   > **Why `AX_Long` as the pivot.** Dihedral is a pure roll about the root fore-aft line, so the plane hinges on `AX_Long` and passes through the wing-root LE at $Y = 0$. Every point on it then obeys $Y = X\tan(dihedral)$ — place a point at its projected span $X$ and the dihedral rise comes for free, with no hard $Y$ number.
 
-* **Phase B — draw the spar on the plane (`LAY_MainSpar_Dihedral`).**
-  1. Click **Insert ▸ Sketch** and pick `PLN_Dihedral` as the sketch plane; **F2** → `LAY_MainSpar_Dihedral`.
-  2. Press **`L`**, tick **For construction**, and draw a rough line from the wing root outboard toward the port (**+X**) tip.
-  3. **Root end —** add a **Coincident** to `AX_Long` (pins the root at $X = 0$, $Y = 0$), then **Smart Dimension** its $Z$ to the **Front Plane** `= "x_spar_root"` on the aft ($-Z$) side.
-  4. **Outboard end —** pin the projected footprint with two dimensions to the orthogonal datums and let the plane supply $Y$:
-     - **Smart Dimension** the endpoint's spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "b_semi_proj"`. You cannot dimension to the **Right Plane** here — it is not perpendicular to the tilted `PLN_Dihedral`, so SolidWorks offers no clean point-to-plane dimension; the in-plane distance from the Origin does, and the `/ cos(dihedral)` factor makes the slant length project back to the exact projected semi-span $X = b\_semi$.
-     - **Smart Dimension** its distance to the **Front Plane** `= "x_spar_tip_swept"` on the aft ($-Z$) side → sets chordwise $Z$ (LE sweep carried to the tip, plus the spar fraction of the tip chord).
-  > **Why the `/ cos(dihedral)` factor.** `PLN_Dihedral` is tilted about `AX_Long`, so its normal is $(-\sin\Gamma,\,\cos\Gamma,\,0)$ (with $\Gamma =$ `dihedral`) — not parallel to $X$ — so the **Right Plane is not perpendicular to the sketch** and offers no clean spanwise point-to-plane dimension; you dimension **in-plane from the Origin** instead. That in-plane length is the **slant** span, and a slant $s$ projects to $X = s\cos(dihedral)$. Setting it to `= "b_semi_proj"` therefore lands the tip at the exact projected semi-span $X = b\_semi$, so the tilted spar keeps one projected footprint with the flat `LAY_Wing_Plan`, while the plane's tilt supplies $Y = b\_semi\tan(dihedral)$. (The **Front-Plane** chord dimension below is unaffected — the Front Plane *is* perpendicular to `PLN_Dihedral`.)
-  5. **Physical rib-root seed point (base reference for Route A).** Select the **Point** tool, click **on** the spar line to drop a coincident point, then **Smart Dimension** from the line's **root endpoint** to the **seed point** — both lie on the line, so the value reads the **true along-spar length**, not an $X$-projection. Type `= "rib_root_off_physical"` ▸ green check.
-  > **Success state:** `LAY_MainSpar_Dihedral` turns **fully black**; rotate to isometric and the line climbs in **+Y** as it runs outboard in **+X**, raking in **Z** with the plan sweep. Exit the sketch.
+* **Phase B — draw the complete wing on `PLN_Incidence` (`LAY_Wing_Incidence`).** This one sketch carries **everything about the wing**: the 3-D planform outline, both spars, the joiner, the rib stations, the MAC line, the control-surface stations, and both hinge lines. It replaces the old flat wing half of `LAY_Wing_Plan` and the retired `LAY_MainSpar_Dihedral` / `LAY_Hinge_Lines_Dihedral` sketches. Everything in it is already at its true 3-D attitude, because the two-plane chain supplies both $Y$ and the pitch.
+
+  > **⭐ Two rotations, two projection families — neither datum plane is perpendicular any more.** `PLN_Incidence` is rolled by $\Gamma =$ `dihedral` about `AX_Long` **and** pitched by $\theta =$ `i_wing` about `AX_Pitch_Wing`. The roll tips the plane away from the **Right Plane**; the pitch tips it away from the **Front Plane**. So SolidWorks offers a clean point-to-plane dimension to *neither*, and every distance in this sketch is measured **in-plane from the Origin**:
+  >
+  > | Direction | Measured | Global family | Factor |
+  > |---|---|---|---|
+  > | Spanwise (in-plane, perpendicular to `AX_Long`) | from the Origin | `_proj` — `b_semi_proj`, `y_MAC_proj`, `rib_root_off_proj`, `y_ail_in_proj` … | $1/\cos\Gamma$ |
+  > | Chordwise (in-plane, along the chord) | from the Origin | `_inc` — `x_LE_tip_inc`, `x_spar_root_inc`, `x_MAC_LE_inc`, `x_hinge_ail_in_inc` … | $1/\cos\theta$ |
+  >
+  > **Line *lengths* take no correction** — `c_root`, `c_tip` and `MAC` are physical chords lying in the plane, so they are drawn at their true value. Only *station* distances, which used to be point-to-plane dimensions, need a projection factor. At `dihedral` = 0 every `_proj` global collapses to its plain value, and at `i_wing` = 0 every `_inc` global does the same — which is exactly the case today, so nothing about the current wing moves.
+
+  1. Click **Insert ▸ Sketch**, pick **`PLN_Incidence`** as the sketch plane, and press **`Ctrl + 8`** (Normal To); **F2** → `LAY_Wing_Incidence`. Orientation: in-plane span runs outboard to port, $+Z$ forward, $-Z$ aft.
+
+  **Step 1 — root chord and tip station.**
+  1. Select the solid **Line** tool. Start on the sketch **Origin** (the yellow coincident glyph confirms the snap) and drag straight **aft ($-Z$)**; click to drop the root **TE**. **Smart Dimension** this root chord line → `= "c_root"`. Add a **Vertical** relation (parallel to the $Z$ axis) so the chord stays square to the span.
+  2. Select the **Point** tool and drop a **tip station point** out on the port side. **Smart Dimension** its in-plane spanwise distance **from the Origin** → `= "b_semi_proj"`.
+
+  **Step 2 — the swept leading edge.**
+  1. Select the solid **Line** tool, click the **Origin (root LE)**, and connect it to the tip station point. This is the wing **leading edge**.
+  2. **Smart Dimension** the tip station point's in-plane chordwise distance **from the Origin** → `= "x_LE_tip_inc"` on the aft ($-Z$) side. This is what carries the LE sweep out to the tip.
+  > **Do not add a Horizontal relation to the leading edge.** With `sweep_LE` = 11.02° the LE is *not* square to the span — a Horizontal relation will fight the `x_LE_tip_inc` dimension and over-define the sketch. The two dimensions (`b_semi_proj` spanwise, `x_LE_tip_inc` chordwise) fully locate the tip LE on their own.
+
+  **Step 3 — tip chord and trailing edge.**
+  1. Select the solid **Line** tool, click the tip LE point, drag straight **aft ($-Z$)**, and drop the tip **TE**. Hold **`Ctrl`**, select this tip chord line and the root chord line, and add a **Parallel** relation. **Smart Dimension** it → `= "c_tip"`.
+  2. Select the solid **Line** tool and connect the tip TE back to the root TE to close the panel. The half-panel shades light blue and reads black once Steps 1–3 are dimensioned.
+
+  **Step 4 — spars and the joiner (construction).**
+  1. **Main spar.** **Line** tool, tick **For construction**; click on the root chord line, drag outboard, click on the tip chord line. **Smart Dimension** the inboard endpoint's in-plane chordwise distance from the Origin `= "x_spar_root_inc"` (aft, $-Z$); dimension the outboard endpoint `= "x_spar_tip_swept_inc"` chordwise and `= "b_semi_proj"` spanwise, both from the Origin.
+  2. **Rear spar.** Another **For construction** line, root to tip, behind the main spar. Inboard endpoint, in-plane chordwise from the Origin `= "x_rspar_root_inc"`; outboard endpoint, in-plane chordwise from the **tip LE** `= "x_rspar_tip_inc"`.
+  3. **Wing joiner axis.** A **For construction** line starting on `AX_Long` ($X = 0$) and running outboard. **Smart Dimension** its in-plane chordwise distance from the Origin `= "x_joiner_root_inc"` (aft, $-Z$). Because `x_joiner_root` `= "x_spar_root"`, the joiner sits co-linear with the main spar at the root by construction.
+  4. **Physical rib-root seed point.** Select the **Point** tool and click **on** the main spar line to drop a coincident point, then **Smart Dimension** from the spar line's **root endpoint** to this seed — both lie on the line, so this is a true along-spar length → `= "rib_root_off_physical"`. This is the Path 2 seed §7.3 uses.
+
+  **Step 5 — rib stations.**
+  1. Select the **Point** tool and drop a seed point directly on the **main spar** construction line. **Smart Dimension** its in-plane spanwise distance from the Origin → `= "rib_root_off_proj"`.
+  2. Select that point, click **Linear Sketch Pattern**. Under **Direction 1** select the **main spar line** as the pattern axis. Enter placeholders (spacing `50`, instances `2`), tick **Dimension X spacing** and **Display instance count**, green-check.
+  3. Double-click the on-screen spacing dimension → `= "rib_pitch_proj"`; double-click the instance count → `= "n_rib"`.
+  4. Hold **`Ctrl`**, select the second patterned point and the main spar line, and add a **Coincident** so the array stays welded to the spar.
+  > **What `rib_pitch_proj` does and does not correct.** The $1/\cos\Gamma$ factor removes the **dihedral** foreshortening. The pattern still advances *along the spar*, which also rakes in $Z$ with the LE sweep, so the spanwise projection retains the sweep factor exactly as it did on the flat Top Plane — this move changes nothing about that. If you need stations that are physically exact along the real 3-D spar, use §7.3 **Path 2 / Route A**, which is driven by `rib_root_off_physical` and is unaffected.
+
+  **Step 6 — MAC reference line.**
+  1. **Line** tool, **For construction**, drawn parallel to the root chord out on the port panel; add a **Parallel** relation to the root chord line. **Smart Dimension** its in-plane spanwise distance from the Origin → `= "y_MAC_proj"`.
+  2. Drop three points on this line and **Smart Dimension** each in-plane chordwise from the Origin, aft ($-Z$): LE point `= "x_MAC_LE_inc"`, quarter-chord point `= "x_MAC_c4_inc"`, and the third so the gap from point 1 to point 3 reads `= "MAC"` (a true in-plane length — no correction).
+  > **The CG band stays in `LAY_Wing_Plan`.** `PT_CG_loaded` / `_drained` / `_empty` and the fore/aft limits sit on the fuselage centerline at $X = 0$ (§5.6). They are mass datums, not wing-panel geometry, and at $X = 0$ this plane and the Top Plane coincide anyway — leave them where they are.
+
+  **Step 7 — control-surface stations.**
+  1. Select the **Point** tool and drop **four** points directly on the main spar construction line.
+  2. **Smart Dimension** each point's in-plane spanwise distance from the Origin: `= "y_ail_in_proj"`, `= "y_ail_out_proj"`, `= "y_flap_in_proj"`, `= "y_flap_out_proj"`.
+  3. Hold **`Ctrl`**, select each point and the spar line, and add a **Coincident** so all four stay welded to the spar as `b` flexes.
+  > **Flap-out meets aileron-in.** `y_flap_out` and `y_ail_in` both resolve to `"ail_in_pct" * "b_semi"`, so the flap and aileron share a seam with no gap or overlap. For a spacer rib between them, lower `flap_out_pct` or raise `ail_in_pct` in the equations file — never by dragging a point.
+
+  **Step 8 — hinge lines.**
+  1. **Aileron hinge.** Press **`L`**, tick **For construction**, and draw a rough line across the aileron span. **Inboard end —** in-plane spanwise from the Origin `= "y_ail_in_proj"`, in-plane chordwise from the Origin `= "x_hinge_ail_in_inc"` (aft, $-Z$). **Outboard end —** `= "y_ail_out_proj"` spanwise and `= "x_hinge_ail_out_inc"` chordwise.
+  2. **Flap hinge.** In the *same* sketch press **`L`** again, tick **For construction**, and draw a second line inboard of the aileron. **Inboard end —** `= "y_flap_in_proj"` spanwise and `= "x_hinge_flap_in_inc"` chordwise. **Outboard end —** `= "y_flap_out_proj"` spanwise and `= "x_hinge_flap_out_inc"` chordwise.
+  > **The flap hinge is *not* collinear with the aileron hinge.** `(1 - "c_flap_pct")` = 0.70 puts the flap on the **70 %** chord line, 5 % of local chord **forward** of the aileron's 75 %. Because `flap_out_pct` = `ail_in_pct` the two surfaces still meet at one spanwise seam, but their hinge axes are offset in $Z$ — that offset is real and intentional, not a defect.
+
+  **Step 9 — mirror and close out.**
+  1. Click **Mirror Entities**. In **Entities to Mirror**, box-select the **wing panel outline** (LE, tip chord, TE). Do **not** select the spars, the joiner, the rib points, the MAC line, the control stations, or the hinge lines — like `AX_MainSpar`, those ride the single port line and the starboard side is derived downstream.
+  2. Click inside **Mirror About**, select `AX_Long`, confirm **Copy** is ticked, green-check.
+  3. Confirm `LAY_Wing_Incidence` reads **fully black** (Fully Defined). Rotate to isometric: the whole panel climbs in $+Y$ as it runs outboard and rakes aft in $Z$ with the LE sweep. **Exit** the sketch and drag it into `2_LAYOUT_SKETCHES`.
+  > **Success state:** one sketch holds the entire wing. `AX_MainSpar`, `AX_MainSpar_3D`, `AX_WingJoiner`, `AX_Hinge_Ail`, `AX_Hinge_Flap` and every §7.3 rib plane are promoted from lines inside it, so a single `dihedral` or `sweep_LE` edit re-solves the outline, the spars, the ribs and the hinges together — they can no longer disagree, because they are no longer in separate sketches.
+
 
 * **Phase C — promote to `AX_MainSpar_3D`.**
-  1. Click **Insert ▸ Reference Geometry ▸ Axis**; select **One Line/Edge/Axis** and click the `LAY_MainSpar_Dihedral` construction line.
+  1. Click **Insert ▸ Reference Geometry ▸ Axis**; select **One Line/Edge/Axis** and click the **main-spar construction line** inside `LAY_Wing_Incidence` (Phase B, Step 4).
   2. Green-check; **F2** → `AX_MainSpar_3D`.
   > **Success state:** the same named axis §7.3 slices against — now carrying true sweep **and** dihedral because it lives on `PLN_Dihedral`. Every downstream reference (rib planes §7.3, hinges §7.7, the §8 loft) selects it unchanged.
 
-**Tree housekeeping — folder the axes.** Group the five axes into the `4_AXES` folder from the §1.6 scheme (and drop the `LAY_MainSpar_Dihedral` sketch into `2_LAYOUT_SKETCHES` with the other layout sketches):
+**Tree housekeeping — folder the axes.** Group the five axes into the `4_AXES` folder from the §1.6 scheme (`LAY_Wing_Incidence` goes into `2_LAYOUT_SKETCHES` with the other layout sketches):
 1. In your FeatureManager tree, hold **Ctrl** and select all five axes (`AX_MainSpar`, `AX_Thrust`, `AX_GearAxle`, `AX_WingJoiner`, `AX_MainSpar_3D`).
 2. Right-click any highlighted axis and select **Add to New Folder**.
 3. Rename the folder to `4_AXES`.
@@ -1064,8 +1122,8 @@ This converts the layout sketches into the named, top-level references that down
   1. Click **Insert ▸ Reference Geometry ▸ Plane**.
   2. **First Reference —** click `AX_MainSpar_3D`. SolidWorks defaults to a **Coincident/Parallel** guess (an invalid plane lying *through* the axis); open the constraint dropdown beside the selection box and change it to **Normal to Curve**. The preview flips to a small plane square to the axis.
   3. **Second Reference —** pick the seed that matches your propagation route (Phase 2). The two paths are mutually exclusive; choose by whether you want the wing pinned to exact **spanwise** stations or driven **100% physically** along the spar:
-     - **Path 1 — Projected / hybrid (feeds Route B).** Click the **first patterned seed point** on the main-spar line inside the 2D `LAY_Wing_Plan` sketch (the §5.5 inboard rib point at `= "rib_root_off"`). SolidWorks projects that spanwise station perpendicularly onto the 3D axis and pins the plane there — tilted by the true sweep **and** dihedral. Location comes from the 2D array's **spanwise ($X$) station**, so this base stays exactly co-planar with the per-station points Route B selects downstream.
-     - **Path 2 — Pure physical (feeds Route A).** Click the **3D seed point created directly on the spar line** inside `LAY_MainSpar_Dihedral` (§7.2 Phase B, dimensioned `= "rib_root_off_physical"`). The point already **lives on the axis**, so there is no projection step at all — its location is a true along-spar physical station. This is the base plane for a fully physical layout; pick it if you will propagate with Route A.
+     - **Path 1 — Projected / hybrid (feeds Route B).** Click the **first patterned seed point** on the main-spar line inside `LAY_Wing_Incidence` (§7.2 Phase B Step 5, at `= "rib_root_off_proj"`). SolidWorks projects that spanwise station perpendicularly onto the 3D axis and pins the plane there — tilted by the true sweep **and** dihedral. Location comes from the 2D array's **spanwise ($X$) station**, so this base stays exactly co-planar with the per-station points Route B selects downstream.
+     - **Path 2 — Pure physical (feeds Route A).** Click the **3D seed point created directly on the spar line** inside `LAY_Wing_Incidence` (§7.2 Phase B Step 4, dimensioned `= "rib_root_off_physical"`). The point already **lives on the axis**, so there is no projection step at all — its location is a true along-spar physical station. This is the base plane for a fully physical layout; pick it if you will propagate with Route A.
   4. Click the **Green Checkmark** ($\checkmark$) and rename the plane `PLN_RibStn_R01`.
   > **Why this works:** *Normal to Curve* always takes **orientation** from the 3D axis; the second reference supplies only **location**. Neither carries a hard number, so the plane's tilt re-solves with `dihedral`/`sweep_LE`/taper regardless of path, while its station re-solves with `rib_root_off` (**Path 1**, projected spanwise) or `rib_root_off_physical` (**Path 2**, along-spar) — no `->x`, no stale offset either way.
   > **Success state:** `PLN_RibStn_R01` renders as a small rectangle **canted in both Y and Z** (not parallel to the Right Plane). **Measure** it to the Right Plane and it reports a non-zero tilt equal to the compound spar angle.
@@ -1079,7 +1137,7 @@ This converts the layout sketches into the named, top-level references that down
   4. Open the **Features to Pattern ▸ Reference Geometry** box and pick `PLN_RibStn_R01`; green check. The set re-counts and re-spaces whenever `rib_pitch` or `n_rib` changes — flex-safe in both directions.
   5. **Rename the pattern feature.** Slow-double-click the newly created linear-pattern feature at the bottom of the tree (or press **F2**) and rename it exactly `LPTN_RibPlanes`. In SolidWorks the patterned reference planes live *inside* this single master pattern feature rather than as separate top-level planes, so suffix naming (`R02`, `R03`, …) is handled implicitly by the pattern instances — naming the parent feature cleanly is paramount.
   6. **File it immediately.** Drag both the seed plane (`PLN_RibStn_R01`) and the pattern feature (`LPTN_RibPlanes`) up the tree and drop them into the `3_RIB_PLANES` folder.
-  > **Why Pure Route A is self-consistent:** the base plane is located by `rib_root_off_physical` — a true along-spar length (§7.2 Phase B) — **and** the pattern steps `rib_pitch` **along that same 3D axis**. Every station on the wing is therefore measured in one and the same **physical, along-spar metric**. There is no longer a projected-2D base feeding a 3D pattern, so the projected-vs-real mismatch that used to corrupt the **first bay** is gone: the inboard bay is now spaced by the exact same rule as every bay outboard of it. The layout is untangled from `LAY_Wing_Plan`'s flat points from the very first plane.
+  > **Why Pure Route A is self-consistent:** the base plane is located by `rib_root_off_physical` — a true along-spar length (§7.2 Phase B Step 4) — **and** the pattern steps `rib_pitch` **along that same 3D axis**. Every station on the wing is therefore measured in one and the same **physical, along-spar metric**. There is no longer a projected-2D base feeding a 3D pattern, so the projected-vs-real mismatch that used to corrupt the **first bay** is gone: the inboard bay is now spaced by the exact same rule as every bay outboard of it. The layout is untangled from `LAY_Wing_Plan`'s flat points from the very first plane.
   > **Honest note — physical pitch ≠ spanwise pitch, by design:** `rib_pitch` is *defined* spanwise (§5.5), and Route A lays it **along** the tilted axis, so the absolute spanwise ($X$) stations sit slightly inboard of the flat §5.5 array by $1/(\cos\Gamma\,\cos\Lambda_{spar})$ (≈ 0.4 % at `dihedral = 4°`, `sweep_LE = 0`). Under Pure Route A this is a **uniform, intentional** physical spacing applied identically to every bay — not an interior inconsistency. If instead you need the ribs pinned to the exact spanwise §5.5 stations, take **Path 1 → Route B**, which is station-exact in $X$.
 
   **Route B — Manual per-station planes (station-exact, clean names).** Built on the **Path 1** (projected) base plane, keeping the whole set on the 2D spanwise §5.5 stations. Best when each plane needs its own name for tidy **Insert Part** picks or PDM. For each station $n = 2 \ldots$ `n_rib`:
@@ -1204,7 +1262,7 @@ When selecting references in the **Coordinate System** PropertyManager, selectin
 
 **Prerequisites — prepare your workspace.** Before creating the coordinate systems, ensure the tail datum point is visible:
 1. In the **FeatureManager Design Tree**, expand your `2_LAYOUT_SKETCHES` folder.
-2. Right-click `LAY_Wing_Plan` and click the **Show** icon (the open eyeball) to expose your horizontal-tail root point.
+2. Right-click `LAY_HTail_Incidence` and click the **Show** icon (the open eyeball) to expose your horizontal-tail root point.
 
 **Create `CSYS_Wing` — the wing master datum.** This coordinate system establishes the local master datum for your wing assembly, rooted at the wing-root leading edge.
 1. Go to the top menu bar and click **Insert ▸ Reference Geometry ▸ Coordinate System** (or on the **Features** tab of the CommandManager, click the **Reference Geometry** dropdown and select **Coordinate System**).
@@ -1260,36 +1318,21 @@ These give downstream parts clean origins to mate to and a consistent frame for 
 >
 > All MMGS millimetre values; the Phase 3 box dimensions reference them directly (`= "servo_L"`, and so on).
 
-**7.7.1 — Phase 1: Spanwise control stations (`LAY_Wing_Plan`).** Map where each surface starts and ends along the span, then promote the four station vertices to reference points.
-1. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Wing_Plan` ▸ **Edit Sketch**; press **`Ctrl + 8`** (Normal To). Orientation: $+X$ port span, $+Z$ forward, $-Z$ aft.
-2. **Aileron stations.** Select the **Point** tool and drop two points directly on your **main-spar construction line** (§5.4), out on the $+X$ (port) panel.
-   - **Smart Dimension** the inboard point's lateral distance to the fuselage centerline ($X = 0$) → `= "y_ail_in"` (this equals `"ail_in_pct" * "b_semi"` = 302.5 mm).
-   - Dimension the outboard point → `= "y_ail_out"` (= `"ail_out_pct" * "b_semi"` = 522.5 mm).
-   - Hold **`Ctrl`**, select each point and the spar line, and add a **Coincident** so both stay welded to the spar as `b` flexes.
-3. **Flap stations.** Drop two more points on the spar line inboard of the ailerons; dimension them `= "y_flap_in"` (55 mm) and `= "y_flap_out"` (302.5 mm).
-   > **Flap-out meets aileron-in.** `y_flap_out` and `y_ail_in` both resolve to `0.55 * b_semi` = 302.5 mm, so the flap and aileron share a seam with no gap or overlap. For a spacer rib between them, lower `flap_out_pct` or raise `ail_in_pct` in the equations file — never hard-type the gap.
-4. Exit the sketch.
-5. **Promote to reference points (`5_POINTS`).** For each of the four vertices: **Insert ▸ Reference Geometry ▸ Point**, click the sketch vertex, green-check, **F2**, and rename `PT_Ail_Inboard`, `PT_Ail_Outboard`, `PT_Flap_Inboard`, `PT_Flap_Outboard`. **`Ctrl`**-select all four and drag them into the existing **`5_POINTS`** folder (§7.1).
-   > **Port-side masters, mirror downstream.** These live on the port ($+X$) panel only. The starboard surfaces are the Right-Plane mirror; downstream aileron/flap parts either mirror the derived component or re-derive from the mirrored geometry — the skeleton keeps one authoritative port set, consistent with §5.9.
+**7.7.1 — Phase 1: Spanwise control stations (already drawn in `LAY_Wing_Incidence`).** The four station points live in the merged wing sketch (§7.2 Phase B, Step 7), dimensioned in-plane from the Origin as `= "y_ail_in_proj"`, `= "y_ail_out_proj"`, `= "y_flap_in_proj"` and `= "y_flap_out_proj"` and each **Coincident** to the main spar line. Nothing new to sketch here — promote them to reference points.
+1. Expand `2_LAYOUT_SKETCHES` and right-click `LAY_Wing_Incidence` ▸ **Show** so the four vertices are selectable.
+2. **Promote to reference points (`5_POINTS`).** For each of the four vertices: **Insert ▸ Reference Geometry ▸ Point**, click the sketch vertex, green-check, **F2**, and rename `PT_Ail_Inboard`, `PT_Ail_Outboard`, `PT_Flap_Inboard`, `PT_Flap_Outboard`.
+   > **Port-side masters, mirror downstream.** These live on the port ($+X$) panel only. The starboard surfaces are the Right-Plane mirror; downstream aileron/flap parts either mirror the derived component or re-derive from the mirrored geometry.
+   > **They already carry dihedral.** Because the stations sit on `PLN_Dihedral` rather than the Top Plane, each promoted point is already at its true $Y = X\tan\Gamma$ height — no lifting step, and no chance of a control station disagreeing with its own hinge axis.
 
 **7.7.2 — Phase 2: True 3-D hinge axes (`AX_Hinge_Ail` / `AX_Hinge_Flap`).**
 > **Why the hinge rides `PLN_Dihedral`.** The hinge is the *physical rotation axis* of the surface — every point of the moving flap swings on one straight line. The Micro wing carries **dihedral** (the tip rides $\approx 38$ mm up at $Y = b_{semi}\tan(dihedral)$), so the 75 %-chord seam climbs in $+Y$ as it runs outboard; a flat Top-Plane line stays at $Y = 0$ and misses it, binding inboard and gapping outboard through the throw. Because the hinge sits at the **same dihedral tilt as the spar**, it lives on the very same structural datum plane `PLN_Dihedral` (§7.2) — draw it there and the dihedral $Y$-rise comes straight from the plane, with **no 3-D bridging sketch and no relation to the front-view dihedral line**.
 
-* **Step 1 — draw the hinge lines on `PLN_Dihedral` (`LAY_Hinge_Lines_Dihedral`).**
-  1. Click **Insert ▸ Sketch** and pick `PLN_Dihedral` as the sketch plane; **F2** → `LAY_Hinge_Lines_Dihedral`.
-  2. Press **`L`**, tick **For construction**, and draw a rough aileron hinge line from the inboard to the outboard aileron region.
-  3. **Inboard end —** **Smart Dimension** its spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "y_ail_in_proj"` — the tilted `PLN_Dihedral` has no clean dimension to the Right Plane, so the in-plane distance with the `/ cos(dihedral)` factor lands the projected span at exactly $X = y\_ail\_in$. Its distance to the **Front Plane** `= "x_hinge_ail_in"` on the aft ($-Z$) side (chordwise $Z$) is unaffected. The plane sets $Y = y\_ail\_in\tan(dihedral)$ for free.
-  4. **Outboard end —** spanwise distance **from the Origin** `= "y_ail_out_proj"` (in-plane, projecting to $X = y\_ail\_out$); distance to the **Front Plane** `= "x_hinge_ail_out"` on the aft ($-Z$) side.
-  > **The chord term, unpacked.** `(1 - "c_ail_pct")` is the 75 %-chord hinge fraction; `("c_root" - ("c_root" - "c_tip") * "ail_*_pct")` is the local chord at that spanwise station under linear taper; the `tan("sweep_LE" * pi/180)` term walks the hinge aft with LE sweep. Together they place each end at the true 75 %-chord point — the value the flat plan would give, now carried straight onto the dihedral plane with no plan-point pierce.
-  5. **Flap hinge, draw —** in the *same* sketch press **`L`** again, tick **For construction**, and draw a second rough line inboard of the aileron, running from the inboard to the outboard flap region.
-  6. **Flap inboard end —** **Smart Dimension** its spanwise distance **from the Origin** (in-plane, perpendicular to `AX_Long`) `= "y_flap_in_proj"` — same tilted-sketch rule as the aileron, projecting to exactly $X = y\_flap\_in$. Its distance to the **Front Plane** `= "x_hinge_flap_in"` on the aft ($-Z$) side (chordwise $Z$). The plane sets $Y = y\_flap\_in\tan(dihedral)$ for free.
-  7. **Flap outboard end —** spanwise distance **from the Origin** `= "y_flap_out_proj"` (in-plane, projecting to $X = y\_flap\_out$); distance to the **Front Plane** `= "x_hinge_flap_out"` on the aft ($-Z$) side.
-  > **The flap hinge is *not* collinear with the aileron hinge.** `(1 - "c_flap_pct")` = 0.70 puts the flap on the **70 %** chord line, 5 % of local chord **forward** of the aileron's 75 %. Because `flap_out_pct` = `ail_in_pct` = 0.55 the two surfaces abut at $X = 302.5$ mm with no spanwise gap, where the local chord is 234 mm — so expect a **≈ 11.7 mm chordwise step** between the two hinge lines at that junction. That step is the flap/aileron seam, not a modelling error; the downstream rib split (Phase 4) cuts to whichever line its station falls under.
-  8. Confirm both hinge lines read **fully black** (fully defined), then **Exit** the sketch.
-  > **Washout-exact refinement (optional).** `PLN_Dihedral` captures dihedral but not the `twist_tip` rotation of the outboard section. For a hinge that also follows washout, instead **Pierce** each endpoint to the intersection of the local aileron rib station and `SURF_Wing_OML` at 75 % chord (needs the §8.4 surface). Use this only if aileron-gap tolerance is tight; the on-plane build is the standard path.
+* **Step 1 — the hinge lines are already drawn.** Both hinge lines were built in the merged wing sketch (§7.2 Phase B, Step 8): the aileron hinge dimensioned `= "y_ail_in_proj"` / `= "y_ail_out_proj"` spanwise and `= "x_hinge_ail_in"` / `= "x_hinge_ail_out"` to the Front Plane, and the flap hinge `= "y_flap_in_proj"` / `= "y_flap_out_proj"` and `= "x_hinge_flap_in"` / `= "x_hinge_flap_out"`. Right-click `LAY_Wing_Incidence` ▸ **Show** so the two construction lines are selectable, then continue at Step 2.
+  > **Washout-exact refinement (optional).** `PLN_Dihedral` captures dihedral but not the `twist_tip` rotation of the outboard section. For a hinge that also follows washout, **Pierce** each endpoint to `SURF_Wing_OML` at the local hinge %-chord instead of dimensioning it in-plane. At `twist_tip` = 0 the two are identical.
+
 * **Step 2 — promote to axes (`4_AXES`).**
-  1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the **aileron** hinge line inside `LAY_Hinge_Lines_Dihedral`, green-check, **F2** → `AX_Hinge_Ail`.
-  2. Repeat on the **flap** hinge line → `AX_Hinge_Flap`. Drag both into `4_AXES` (§7.2); drop `LAY_Hinge_Lines_Dihedral` into `2_LAYOUT_SKETCHES`.
+  1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the **aileron** hinge line inside `LAY_Wing_Incidence`, green-check, **F2** → `AX_Hinge_Ail`.
+  2. Repeat on the **flap** hinge line → `AX_Hinge_Flap`. Drag both into `4_AXES` (§7.2).
   > **Success state:** two named axes, each a straight 3-D line rising with dihedral — they lie on `PLN_Dihedral`, so the $\Delta Y / \Delta X = \tan(dihedral)$ check in §13.3.6 passes by construction — ready as the pivot datum for the downstream split (Phase 4) and for the hinge mate in the assembly.
 
 **7.7.3 — Servo packaging (moved to Installation).** Servo keep-out envelopes and the skin-breach audit are **component installation**, not published skeleton geometry — they live in the **Installation guide** (§I-1). The skeleton publishes what that installation consumes: the hinge axes `AX_Hinge_Ail` / `AX_Hinge_Flap` (§7.7.2) and `SURF_Wing_OML` (§8.4).
@@ -1321,7 +1364,7 @@ These give downstream parts clean origins to mate to and a consistent frame for 
 **7.8.1 — Payload drop-door kinematics (moved to Installation).** The door swing envelope and hatch pivot are **mechanism kinematics** → **Installation guide** (§I-2). The skeleton publishes the three-state CG markers (§7.8.3) the mechanism references; no payload container or bay interface geometry is published, so the mechanism engineer sets the door aperture against the OML directly.
 
 **7.8.3 — Phase 3: Multi-configuration CG trajectory tracking.** Lay three centerline points whose stations are computed live from the weight globals, so the CG walks visibly as the water drains.
-1. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Wing_Plan` ▸ **Edit Sketch** (**`Ctrl + 8`**). You will dimension all three points along the fuselage centerline ($X = 0$), aft distance from the Origin along $Z$ — the same convention as the §5.6 CG band.
+1. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Wing_Plan` ▸ **Edit Sketch** (**`Ctrl + 8`**) — the CG band is still on the Top Plane (§5.6). You will dimension all three points along the fuselage centerline ($X = 0$), aft distance from the Origin along $Z$ — the same convention as the §5.6 CG band.
 2. **Loaded CG (`PT_CG_loaded`).** Drop a **Point** on the centerline; **Smart Dimension** its $Z$ from the Origin → `= "x_CG"` (the full-water design target; this coincides with the existing `PT_CG_target`, §7.1 — reuse that point instead if you prefer a single loaded marker).
 3. **Drained CG (`PT_CG_drained`).** Drop a second centerline point; **Smart Dimension** its $Z$ → the moment balance after the water leaves (container stays aboard):
    `= "x_CG_drained"`
@@ -1513,10 +1556,10 @@ Drag all three formulas down to the final row of coordinate data. The transform 
 > **Endpoint closure (Method A has no merge).** Curve Through XYZ Points joins points in list order with **no merge tolerance**, so a clean shared vertex forms only where two curves carry the *identical* endpoint. Both the **LE apex row** (repeated across each airfoil's Upper and Lower streams) and the closed **TE point** (`1.000000  0.000000`, first = last) must be exact — a merely *near* coincidence (e.g. `1.000000 0.00009` vs `1.000000 -0.00003`) leaves a micro-fork with no snappable vertex. Fix it at the data level in the Excel `A`/`B` columns (§8.1 split + closure items) and re-export. *(Method B's fit-spline import tolerates this via **Merge points closer than 0.05 mm**, §8.2 — Method A does not.)*
 
 **Spatial alignment verification pass.**
-1. Expand your `2_LAYOUT_SKETCHES` folder, right-click `LAY_Wing_Plan`, and click **Show** (the open eyeball). Right-click `LAY_Side_Profile` and click **Show**.
+1. Expand your `2_LAYOUT_SKETCHES` folder, right-click `LAY_Wing_Incidence`, and click **Show** (the open eyeball) — the wing tip station point lives there now. Right-click `LAY_Side_Profile` and click **Show**.
 2. Press **`Ctrl + 7`** to switch to an isometric viewport.
 3. **Verify the root nose vertex:** zoom into the master global Origin $(0,0,0)$. The shared **LE vertex** where `CRV_Airfoil_Root_Upper` and `CRV_Airfoil_Root_Lower` meet must sit exactly on the Origin.
-4. **Verify the tip nose vertex:** zoom out to the port wingtip. The shared **LE vertex** of the two `CRV_Airfoil_Tip_*` curves must meet the outer tip station point on `LAY_Wing_Plan`, lifted to the dihedral line at $Y = b_{semi}\tan(dihedral) \approx 38$ mm.
+4. **Verify the tip nose vertex:** zoom out to the port wingtip. The shared **LE vertex** of the two `CRV_Airfoil_Tip_*` curves must meet the outer tip station point in `LAY_Wing_Incidence` — which already sits at its true dihedral height, so there is nothing to lifted to the dihedral line at $Y = b_{semi}\tan(dihedral) \approx 38$ mm.
 5. **Verify the TE vertices:** confirm each airfoil's upper/lower curves also close to a **single TE vertex** (no fork) at root and tip. If any nose or tail shows two separate endpoints, the shared row isn't exact — see the closure blockquote above.
 6. *Troubleshooting:* if a curve floats off-target, the error is in your Excel cells, not SolidWorks. Re-verify your spreadsheet parameters against §8.2 Method A.
 
@@ -1542,7 +1585,7 @@ Drag all three formulas down to the final row of coordinate data. The transform 
 8. Once the entire profile turns solid black, click the **Exit Sketch** icon in the confirmation corner, press **F2** on the sketch feature in your tree, and rename it to **`LAY_Airfoil_Placed_Root`**.
 
 **Part 3 — align the tip airfoil profile (`PLN_Tip`).**
-1. Right-click your `LAY_Wing_Plan` sketch in the tree and ensure it is set to **Show** so the outer layout points are visible.
+1. Right-click your `LAY_Wing_Incidence` sketch in the tree and ensure it is set to **Show** so the outer layout points are visible.
 2. Click your custom **`PLN_Tip`** plane feature once and click the **Sketch** icon. Press **`Ctrl + 8`** to snap normal to the plane.
 3. Paste your imported airfoil spline contour into the canvas (**`Ctrl + V`**).
 4. Select the **Centerline** tool. Click the airfoil's front **leading-edge vertex**, drag straight aft horizontally, and click the sharp **trailing-edge point**. Press **`Esc`** to establish your tip **chord line**.
@@ -1559,7 +1602,7 @@ Drag all three formulas down to the final row of coordinate data. The transform 
 
 **Prerequisites — expose your split profiles.**
 1. Confirm all four airfoil curves are **Shown**: `CRV_Airfoil_Root_Upper` / `_Lower` and `CRV_Airfoil_Tip_Upper` / `_Lower` (Method A). *(Method B / Path 2 users have single closed contours instead — `LAY_Airfoil_Placed_Root` / `_Tip`; their sketches already carry explicit LE/TE vertices, so the rails below weld to those and you loft the two closed profiles in a **single** loft — see the Path 2 note at Step 2.)*
-2. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Wing_Plan`, and click **Show** — kept visible only as a *planform reference*, no longer as a guide-curve source.
+2. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Wing_Incidence`, and click **Show** — kept visible only as a *planform reference*, no longer as a guide-curve source.
 3. Press **`Ctrl + 7`** for an isometric view.
 
 **Step 1 — build the 3D guide rails (`LAY_Wing_Guides_3D`).** These are the physical bridges the loft follows from root to tip. Because the split curves meet at hard vertices, this is a clean dot-to-dot — no pierce workaround, no reference points.
@@ -2196,7 +2239,7 @@ Each is framed as **Detect → Fix → Prevent** so it's actionable when you hit
 - *Prevent:* after any tail-airfoil re-export or empennage-global edit, run **What's Wrong** + the Dangling filter before rebuilding the tail lofts (§13.1 / §13.3.5).
 
 **23. Unconstrained hinge line (flat or drifting 3-D axis).** A hinge line left on the Top Plane, or a 3-D hinge endpoint short a relation, either sits at $Y = 0$ (ignoring dihedral) or wanders on rebuild — the surface then binds and gaps through its travel.
-- *Detect:* `LAY_Hinge_Lines_Dihedral` shows a `(-)` prefix or a **blue** endpoint; **Measure** `AX_Hinge_Ail` returns $\Delta Y = 0$; the aileron pivots on an axis that does not match the wing dihedral.
+- *Detect:* `LAY_Wing_Incidence` shows a `(-)` prefix or a **blue** hinge endpoint; **Measure** `AX_Hinge_Ail` returns $\Delta Y = 0$; the aileron pivots on an axis that does not match the wing dihedral.
 - *Fix:* draw the hinge on `PLN_Dihedral` (§7.7.2) and dimension each end's span to the **Right Plane** and chord to the **Front Plane** — the plane then supplies the dihedral $Y$ by construction.
 - *Prevent:* never draw a hinge as a flat Top-Plane line; build it on `PLN_Dihedral` (§7.7.2) so it inherits the wing dihedral by construction, and keep the §13.3.6 $\Delta Y / \Delta X = \tan(dihedral)$ check in sign-off.
 
