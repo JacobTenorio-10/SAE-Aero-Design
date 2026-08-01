@@ -24,6 +24,7 @@ Risk tiers
 """
 
 import argparse
+import html as _html
 import os
 import re
 
@@ -33,7 +34,54 @@ DOCS = [
     ("INSTALL",  "Installation_Layout_Guide_Micro.md"),
 ]
 
-SECTION_RE = re.compile(r"^(?:(#{2,})\s*(.+?)\s*$|\*\*(\d+\.[\d.]*)\s*—\s*(.+?)\*\*)")
+DETAILS_OPEN  = re.compile(r"^\s*<details[^>]*>\s*$")
+DETAILS_CLOSE = re.compile(r"^\s*</details>\s*$")
+SUMMARY_RE    = re.compile(r"^\s*<summary>(.*)</summary>\s*$")
+
+
+def summary_text(s):
+    """<summary> inner HTML -> plain section label."""
+    s = re.sub(r"<[^>]+>", "", s)
+    return _html.unescape(s).strip()
+
+
+class SectionTracker:
+    """Innermost enclosing <details> summary, falling back to the last heading.
+
+    The guides are wrapped in nested toggle lists, so the toggle tree - not the
+    heading level - is what actually locates a line. Bold-paragraph subsection
+    titles now live in <summary>, so matching headings alone collapses every
+    reference up to its H2.
+    """
+
+    def __init__(self):
+        self.stack = []
+        self.heading = "(front matter)"
+
+    def feed(self, line):
+        if DETAILS_OPEN.match(line):
+            self.stack.append(None)
+            return
+        if DETAILS_CLOSE.match(line):
+            if self.stack:
+                self.stack.pop()
+            return
+        m = SUMMARY_RE.match(line)
+        if m:
+            if self.stack:
+                self.stack[-1] = summary_text(m.group(1))
+            return
+        m = re.match(r"^(#{2,6})\s+(.*)$", line)
+        if m:
+            self.heading = m.group(2).strip()
+
+    @property
+    def current(self):
+        for lbl in reversed(self.stack):
+            if lbl:
+                return lbl
+        return self.heading
+
 NUM_RE = re.compile(r"(?<![\w.$])(\d+\.\d+|\d+)(?![\w.])")
 
 
@@ -48,13 +96,6 @@ def parse_equations(path):
             except ValueError:
                 pass
     return vals
-
-
-def section_label(line):
-    m = SECTION_RE.match(line)
-    if not m:
-        return None
-    return m.group(2).strip() if m.group(1) else f"{m.group(3)} — {m.group(4).strip()}"
 
 
 def tier(literal, value, owners):
@@ -92,16 +133,15 @@ def main():
         path = os.path.join(d, fn)
         if not os.path.exists(path):
             continue
-        current, in_fence = "(front matter)", False
+        tracker, in_fence = SectionTracker(), False
         for i, line in enumerate(open(path, encoding="utf-8").read().split("\n"), 1):
-            if line.startswith("```"):
+            if line.lstrip().startswith("```"):
                 in_fence = not in_fence
                 continue
             if in_fence:
                 continue
-            lbl = section_label(line)
-            if lbl:
-                current = lbl
+            tracker.feed(line)
+            current = tracker.current
             # a literal directly inside a global citation is fine - it IS the
             # equation. Only bare prose literals are restatements.
             stripped = re.sub(r'`=\s*"[^"]*"[^`]*`', "", line)
