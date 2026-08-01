@@ -23,7 +23,7 @@ Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requ
 - **Set document units to MMGS** (mm · gram · second). Lengths = mm, masses = g, water volume in cm³ (= mL).
 - **Reference other variables in quotes:** `"b"`, `"MAC"`.
 - **`sqr(x)` is SQUARE ROOT** (use `x^2` to square). `pi` is built in. `abs()` available.
-- **Angles** stored as plain numbers in degrees; link directly to angular dimensions, convert only inside math: `tan("sweep_LE"*pi/180)`.
+- **Angles** stored as plain numbers in degrees; link directly to angular dimensions, convert only inside math: `tan("sweep_LE"*pi/180)`. **This requires Angular equation units = Radians** (Tools ▸ Equations) — see the radians rule below.
 - **All longitudinal `x_*` globals are positive distances from the origin at the wing-root LE.** Coordinate system: **+Z forward (nose), −Z aft (tail), +Y up, +X port**. Place each station on the +Z (forward) or −Z (aft) side; the dimension references the positive global directly.
 - **Inputs vs derived:** never hard-type what an equation can produce. Geometry-first here (input $b$, $c_r$, $c_t$); §10 gives the performance-first flip.
 - **Offline (SI) block:** aero/takeoff sizing in §10 is unit-messy in MMGS — keep it in your sizing spreadsheet and feed `b`, `c_root`, `c_tip` back in.
@@ -31,6 +31,8 @@ Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requ
 > **The positive-magnitude rule.** **No value in `skeleton_equations_micro.txt` is ever negative** — angles included. Every global is a magnitude; direction is carried by the model (which side of a datum a dimension is placed, a plane's **Flip** toggle, a pattern's direction arrow), never by a stored sign. `i_HT` = 2.0 is nose-down because `PLN_Incidence_HT` is flipped that way, and `twist_tip` is a positive washout magnitude that `i_tip` **subtracts**. Formulas may contain a minus operator; values may not be negative. `check.py` enforces this with no exemptions.
 
 > **The one-variable rule.** Every SolidWorks Smart Dimension, plane **Offset Distance**, and **Modify** box takes exactly **one** global — `= "some_global"` — never an expression. All derivation lives in `skeleton_equations_micro.txt`. If a dimension needs a computed value, that computation gets its own named global here first. The **Derived-for-dimensioning** globals below exist purely to satisfy this rule: each one wraps a formula that used to be typed into a dimension box.
+
+> **The radians rule.** Trig arguments in this file are converted explicitly, so the SolidWorks **Angular equation units** drop-down (Tools ▸ Equations) must be set to **Radians** in every document that carries this equation set. It is a per-document setting and SolidWorks defaults it to **Degrees**, which converts a second time and silently collapses every swept station toward zero — no error, just wrong geometry. `check.py` cannot read the drop-down, so it enforces the half it can see: no trig call in the file may be written without its `pi/180` conversion. Verify by eye after import — the **Value** column for `x_LE_tip_inc` reads *(≈100.8767)* mm, not *(≈1.74)* mm.
 
 </details>
 

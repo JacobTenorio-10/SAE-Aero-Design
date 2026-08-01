@@ -37,6 +37,16 @@ GLOBAL_COUNT          = 239     # definitions in skeleton_equations_micro.txt
 # one here to silence a failure; fix the value and carry the direction in the
 # geometry instead. A minus OPERATOR inside a formula is fine.
 
+# THE RADIANS RULE: SolidWorks' "Angular equation units" drop-down (Tools >
+# Equations) must be set to Radians, because every trig call in the equations
+# file converts its own argument with * pi/180. That drop-down is per-document
+# and DEFAULTS TO DEGREES, which converts a second time and silently collapses
+# every swept station toward zero -- no error, just wrong geometry. check.py
+# cannot read the drop-down; it enforces the half it can see, namely that no
+# trig call is ever written without its conversion. If the document is ever
+# switched to Degrees, this check must be INVERTED, not deleted.
+TRIG = re.compile(r"\b(sin|cos|tan|asin|acos|atan|sec|cosec|cotan)\s*\(")
+
 # Convention violations. The model stores aft distances as positive magnitudes
 # on the -Z side; this wording contradicts that and must never appear.
 FORBIDDEN = ["aft-positive", "forward-negative", "negative-valued",
@@ -145,6 +155,24 @@ def main():
     r.check(not neg,
             "positive-magnitude rule: no negative values"
             + ("" if not neg else f" -- {len(neg)} found: " + ", ".join(neg)))
+
+    # radians rule: every trig argument carries its own pi/180 conversion
+    badtrig = []
+    for n, rhs in defs:
+        for m in TRIG.finditer(rhs):
+            depth, j = 1, m.end()
+            while j < len(rhs) and depth:
+                if rhs[j] == "(":
+                    depth += 1
+                elif rhs[j] == ")":
+                    depth -= 1
+                j += 1
+            if not re.search(r"pi\s*/\s*180", rhs[m.end():j - 1]):
+                badtrig.append(n)
+    badtrig = sorted(set(badtrig))
+    r.check(not badtrig,
+            "radians rule: every trig argument converted with pi/180"
+            + ("" if not badtrig else f" -- missing in {len(badtrig)}: " + ", ".join(badtrig)))
 
     # ---- 2. markdown files: encoding + line endings ------------------------
     for f in MD_FILES:

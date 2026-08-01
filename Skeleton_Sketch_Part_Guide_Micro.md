@@ -169,13 +169,17 @@ Before opening SolidWorks, run these quick checks to ensure the backbone path is
 ### 1.2 Set the document template and units
 1. **File ▸ New ▸ Part**.
 2. **Tools ▸ Options ▸ Document Properties ▸ Units** → select **MMGS (millimeter, gram, second)**; set Angle to **degrees**; set length decimals to 2. *(MMGS is required for the equation set to read correctly.)*
-3. **File ▸ Save As**, set "Save as type" = **Part Templates (\*.prtdot)**. Browse to `Z:\SAE_Micro_2026\00_Templates\`, and save the file as **`SAE_Micro_Part.prtdot`**.
-4. **Map the path locally (Every team member must do this):**
+3. **Tools ▸ Equations** → in the **Equations, Global Variables, and Dimensions** dialog set **Angular equation units** = **Radians**. This is a per-document setting, SolidWorks defaults it to **Degrees**, and it must be changed *before* the equation set is imported.
+   > **Why:** every trig call in `skeleton_equations_micro.txt` converts its own argument — `x_LE_tip` `= "b_semi" * tan("sweep_LE" * pi/180)`. Left on **Degrees** SolidWorks converts a second time, so the tangent is taken of a small fraction of a degree and every swept station collapses toward zero. 33 globals contain trig and 39 evaluate wrongly, several by more than a root chord. Nothing errors out — the model simply rebuilds to the wrong shape.
+   > **This is not the angular unit from the previous step.** That one sets the *display* unit for angular dimensions, which stays **degrees**: `PLN_Dihedral` is still driven by `= "dihedral"` and reads four degrees on screen. This drop-down governs only the argument units of `sin`, `cos` and `tan` inside equations.
+   > **Success state:** with the equation set loaded, the **Value** column reads *(≈100.8767)* mm for `x_LE_tip_inc`. A reading of *(≈1.74)* mm means the drop-down is still on **Degrees**.
+4. **File ▸ Save As**, set "Save as type" = **Part Templates (\*.prtdot)**. Browse to `Z:\SAE_Micro_2026\00_Templates\`, and save the file as **`SAE_Micro_Part.prtdot`**.
+5. **Map the path locally (Every team member must do this):**
    - Go to **Tools ▸ Options ▸ System Options ▸ File Locations**.
    - Under the **Show folders for:** dropdown, select **Document Templates**.
    - Click **Add**, browse to and select `Z:\SAE_Micro_2026\00_Templates\`, and click **Select Folder**.
    - *(Recommended)* Select the default local `C:` drive paths in this box and click **Delete** to force the team to use the shared repository. Click **Apply**.
-5. **Lock it in as the default:**
+6. **Lock it in as the default:**
    - Click the **Default Templates** tab (still within System Options).
    - Click the browse button (**...**) next to the **Parts** field.
    - Click the `00_Templates` tab at the top of the pop-up, select **`SAE_Micro_Part.prtdot`**, and click **OK**.
