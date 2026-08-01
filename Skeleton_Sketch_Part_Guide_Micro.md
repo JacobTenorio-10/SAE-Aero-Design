@@ -2642,6 +2642,7 @@ Excel cannot read SolidWorks globals, so these are typed as **numbers**. Read ea
 | `I1` | dihedral [deg] | `dihedral_HT` | `dihedral_HT` | — | — |
 | `J1` | root-LE station | `x_HT_LE_root` | `x_HT_LE_root` | `x_VT_LE_root` | `x_VT_LE_root` |
 | `K1` | fin-root seat | — | — | `h_tail_top` | `h_tail_top` |
+| `L1` | empennage lift | `y_emp_axis` | `y_emp_axis` | `y_emp_axis` | `y_emp_axis` |
 
 1. Click `E1`, type the chord value, press **Enter**. Repeat across the row for `F1` through `J1` (and `K1` on the two VT sheets).
 2. Repeat on all four sheets. `J1` is **identical on both sheets of a surface** — it stations the whole surface, not the individual section.
@@ -2650,6 +2651,7 @@ Excel cannot read SolidWorks globals, so these are typed as **numbers**. Read ea
 > **`i_HT` applies to both HT sections.** There is no HT twist global, so root and tip share one incidence. `F1` is **0** on both VT sheets — a symmetric fin at zero incidence.
 > **`J1` is the aft shift.** It is what lands the tail airfoils behind the wing, at `x_HT_LE_root` / `x_VT_LE_root`. Everything ahead of it in the formulas is the identical wing rotation/sweep math.
 > **`K1` seats the fin.** It places the VT root section on the crown and it must equal the §6.8.1 root-$Y$ reference. If `h_tail_top` is ever renamed, `K1` has to follow.
+> **`L1` is the empennage vertical datum.** The whole tail is referenced to `AX_Long_Emp`, which sits `y_emp_axis` above `AX_Long` (§5.8.1), so every sheet carries the same lift. For the **HT this is its only vertical datum** — the stabilizer has none of its own, and its chord plane lands at $Y =$ `y_emp_axis`. For the **VT**, `L1` is applied *on top of* `K1`, and `h_tail_top` is itself measured from the waterline, so the fin root ends up `h_tail_top` above the boom axis rather than on it. If the fin should root **on** the boom, set `L1` to zero on the two VT sheets and give the fin its own `y_VT_root` measured from `AX_Long_Emp` — do not compensate by dropping `L1` from the HT.
 > **This workbook is a manual copy, and it will go stale.** The wing has `gen_airfoil_xyz.py`, which regenerates its four curve files straight from `skeleton_equations_micro.txt`. The empennage has no equivalent, so every one of the constants above is a second, unlinked copy of a global. Re-enter them and re-export the eight streams **whenever a tail global changes** — `S_HT`, `AR_HT`, `V_H`, `l_HT` and `taper_HT` all move `c_root_HT` and `b_HT` without touching this sheet.
 
 </details>
@@ -2661,8 +2663,8 @@ The HT spans laterally ($X$), so it uses the §8.2 Columns C/D/E verbatim, with 
 
 1. **Column C (SolidWorks $X$ — spanwise station).** Click `C3`, type `=$G$1`, press **Enter**.
 2. **Column D (SolidWorks $Y$ — thickness, incidence rotation, dihedral).** Click `D3` and type the §8.2 `D3` formula unchanged:
-   `=(( -A3 - (-0.25) ) * SIN(RADIANS($F$1)) + (B3 - 0) * COS(RADIANS($F$1)) - 0.25 * SIN(RADIANS($F$1))) * $E$1 + ($G$1 * TAN(RADIANS($I$1)))`
-   > With `dihedral_HT` at zero the `TAN(RADIANS($I$1))` term evaluates to zero and drops out on its own. Leave it in the formula: if the stabilizer is ever given dihedral, the sheet follows the global with no re-derivation.
+   `=(( -A3 - (-0.25) ) * SIN(RADIANS($F$1)) + (B3 - 0) * COS(RADIANS($F$1)) - 0.25 * SIN(RADIANS($F$1))) * $E$1 + ($G$1 * TAN(RADIANS($I$1))) + $L$1`
+   > With `dihedral_HT` at zero the `TAN(RADIANS($I$1))` term evaluates to zero and drops out on its own. Leave it in the formula: if the stabilizer is ever given dihedral, the sheet follows the global with no re-derivation. The trailing `+ $L$1` lifts the chord plane onto `AX_Long_Emp` — without it the stabilizer builds on the waterline, `y_emp_axis` too low.
 3. **Column E (SolidWorks $Z$ — chord, incidence rotation, sweep, tail station).** Click `E3` and type the §8.2 `E3` formula with `- $J$1` appended:
    `=(( -A3 - (-0.25) ) * COS(RADIANS($F$1)) - (B3 - 0) * SIN(RADIANS($F$1)) + (-0.25)) * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`
    > The trailing `- $J$1` slides the whole HT aft ($-Z$) onto the `x_HT_LE_root` station.
@@ -2681,13 +2683,13 @@ The fin spans **vertically**, so the span and thickness axes trade places versus
 | SolidWorks axis | Wing / HT (span along $X$) | **VT (span along $+Y$)** |
 |---|---|---|
 | $X$ | spanwise station `=$G$1` | **thickness** → `= B3 * $E$1` |
-| $Y$ | thickness + dihedral | **span station + seat** → `= $G$1 + $K$1` |
+| $Y$ | thickness + dihedral + lift | **span station + seat + lift** → `= $G$1 + $K$1 + $L$1` |
 | $Z$ | chord + sweep | **chord + sweep + tail station** → `= -A3 * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1` |
 
 Work on `VT_Root` first.
 
 1. **Column C (SolidWorks $X$ — lateral thickness).** Click `C3`, type `= B3 * $E$1`, press **Enter**. The airfoil's $y_{norm}$ thickness becomes the fin's lateral half-thickness; symmetry places the two skins at $\pm$ this value about $X = 0$.
-2. **Column D (SolidWorks $Y$ — vertical span station).** Click `D3`, type `= $G$1 + $K$1`, press **Enter**. Every row on the root sheet reads the same value — the fin root sits at $Y =$ `h_tail_top`; the tip sheet climbs to `h_tail_top` + `b_VT`, which is `h_VT_tip`.
+2. **Column D (SolidWorks $Y$ — vertical span station).** Click `D3`, type `= $G$1 + $K$1 + $L$1`, press **Enter**. Every row on the root sheet reads the same value — the fin root sits `h_tail_top` above the waterline plus the `y_emp_axis` empennage lift; the tip sheet climbs a further `b_VT`, landing `y_emp_axis` above `h_VT_tip`.
 3. **Column E (SolidWorks $Z$ — chord, sweep rake, tail station).** Click `E3`, type
    `= -A3 * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`
    and press **Enter**. The `-A3 * $E$1` runs the chord aft ($-Z$) from LE to TE; the `TAN(RADIANS($H$1))` term rakes higher sections aft with `sweep_VT`; `- $J$1` seats the root LE at `x_VT_LE_root`.
@@ -2706,9 +2708,10 @@ Every value below is **informational**, not a source of truth — recompute from
 1. **HT_Root, Column C** — constant `0` on every row (the root sits on the symmetry plane).
 2. **HT_Tip, Column C** — constant *(≈207.30)* on every row, matching `b_semi_HT`.
 3. **HT_Root, Column E at the LE apex row** — *(≈ −848.1)*. Negative, because the HT root LE sits `x_HT_LE_root` **aft ($-Z$)** of the Origin. A positive number means `J1` was entered with the wrong sign or omitted.
-4. **VT_Root, Column D** — constant *(≈35.79)*, matching `h_tail_top`. **VT_Tip, Column D** — constant *(≈242.88)*, matching `h_VT_tip`.
-5. **VT_Root, Column C** — peaks at roughly *(≈10.5)* and is **equal and opposite** either side of the LE apex row. If the two halves are not mirror images, the pasted section is not symmetric and is not a NACA 0012.
-6. **All four sheets** — the first and last rows of Column D (HT) or Column C (VT) must be *identical*, which is the closed TE from Step 1 surviving the transform.
+4. **HT_Root, Column D at the LE apex row** — reads exactly `y_emp_axis`. This is the single most useful check on the sheet: a zero here means `L1` was left empty and the stabilizer will build on the waterline.
+5. **VT_Root, Column D** — constant *(≈60.79)*, which is `h_tail_top` plus `y_emp_axis`. **VT_Tip, Column D** — constant *(≈267.88)*, which is `h_VT_tip` plus `y_emp_axis`.
+6. **VT_Root, Column C** — peaks at roughly *(≈10.5)* and is **equal and opposite** either side of the LE apex row. If the two halves are not mirror images, the pasted section is not symmetric and is not a NACA 0012.
+7. **All four sheets** — the first and last rows of Column D (HT) or Column C (VT) must be *identical*, which is the closed TE from Step 1 surviving the transform.
 
 </details>
 
