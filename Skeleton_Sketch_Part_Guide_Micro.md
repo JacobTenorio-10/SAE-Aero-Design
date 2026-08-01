@@ -988,6 +988,7 @@ Same two-projection rule as the wing (§7.2 Phase B): **spanwise** distances use
 8. **HT main spar (construction).** **Line** tool, tick **For construction**, root chord to tip chord. **Root end —** **Coincident** to the root chord line, then **Smart Dimension** its in-plane chordwise distance **from the root LE** `= "x_spar_root_HT_inc"`. **Tip end —** in-plane spanwise from the root LE `= "b_semi_HT_proj"`, and in-plane chordwise **from the tip LE** `= "x_spar_tip_HT_inc"`.
    > **Why `spar_main_pct` (no dedicated tail-spar global).** The stabilizer spar is co-located at the **same %-chord fraction** as the wing main spar, so `x_spar_root_HT` / `x_spar_tip_HT` re-use an existing fraction rather than introducing a second one. The elevator hinge line is a separate downstream feature at `c_elev_pct`.
 9. **Mirror the outline only.** **Mirror Entities** ▸ select the **LE, tip chord and TE** ▸ **Mirror About** = the **root chord line** ▸ **Copy** ticked ▸ green-check. Leave the **spar port-only** — like `AX_MainSpar`, the axis rides the single port line.
+   > **Exact only while `dihedral_HT` is zero.** A sketch mirror about a line in the sketch plane reflects across the plane spanned by that line and the sketch-plane normal. With no roll tilt on `PLN_Incidence_HT` that plane **is** the Right Plane, so this mirror is exact — the same reason the wing's is not (§7.2 Phase B Step 9). Give the stabilizer any dihedral and the mirrored half comes out with **anhedral**, fully defined and silently wrong. At non-zero `dihedral_HT`: delete this mirror, keep the stabilizer port-only, and mirror the finished component in the assembly (§I-6a).
 10. Confirm `LAY_HTail_Incidence` reads **fully black**; **Exit** and drag it into `2_LAYOUT_SKETCHES`.
 
 <details>
@@ -1019,7 +1020,7 @@ The VT root chord from §5.8 step 1 (`= "c_root_VT"`, on the centerline) is the 
 <details>
 <summary><b>5.9 — Harden the sketch</b></summary>
 
-There is nothing left to mirror here — the fuselage dodecagon was already mirrored and closed in §5.3.5 Phase 4, and the wing and stabilizer are mirrored inside their own sketches (§7.2 Phase B Step 9, §5.8.1 Phase B Step 8).
+There is nothing left to mirror here — the fuselage dodecagon was already mirrored and closed in §5.3.5 Phase 4. The **stabilizer** is mirrored inside its own sketch (§5.8.1 Phase B Step 9), which is exact only because `dihedral_HT` is zero. The **wing** is *not* mirrored anywhere in the skeleton — `LAY_Wing_Incidence` is port-only by design and the starboard panel is created in the assembly (§7.2 Phase B Step 9, §I-6a).
 
 </details>
 
@@ -1666,12 +1667,15 @@ This one sketch carries **everything about the wing**: the 3-D planform outline,
 </details>
 
 <details>
-<summary><b>Step 9 — mirror and close out</b></summary>
+<summary><b>Step 9 — close out (port only; do not mirror)</b></summary>
 
-1. Click **Mirror Entities**. In **Entities to Mirror**, box-select the **wing panel outline** (LE, tip chord, TE). Do **not** select the spars, the joiner, the rib points, the MAC line, the control stations, or the hinge lines — like `AX_MainSpar`, those ride the single port line and the starboard side is derived downstream.
-2. Click inside **Mirror About**, select `AX_Long`, confirm **Copy** is ticked, green-check.
-3. Confirm `LAY_Wing_Incidence` reads **fully black** (Fully Defined). Rotate to isometric: the whole panel climbs in $+Y$ as it runs outboard and rakes aft in $Z$ with the LE sweep. **Exit** the sketch and drag it into `2_LAYOUT_SKETCHES`.
-> **Success state:** one sketch holds the entire wing. `AX_MainSpar`, `AX_MainSpar_3D`, `AX_WingJoiner`, `AX_Hinge_Ail`, `AX_Hinge_Flap` and every §7.3 rib plane are promoted from lines inside it, so a single `dihedral` or `sweep_LE` edit re-solves the outline, the spars, the ribs and the hinges together — they can no longer disagree, because they are no longer in separate sketches.
+1. **Do not mirror this sketch.** `LAY_Wing_Incidence` stays **port ($+X$) only** — the outline, both spars, the joiner, the rib points, the MAC line, the control stations and the hinge lines all ride the single port panel. The starboard side is created downstream, in the assembly (**§I-6a**).
+   > **Why a sketch mirror cannot work here.** **Mirror Entities** about a line $L$ lying in the sketch plane is a 3-D reflection across the plane spanned by $L$ and the sketch-plane normal — **not** across the Right Plane. `PLN_Incidence` is rolled by `dihedral` about `AX_Long`, so that reflection plane is rolled off vertical by the same angle: the mirrored panel stays in the tilted plane and *descends* as it runs outboard. The starboard tip lands at $-b_{semi}\tan\Gamma$ instead of $+b_{semi}\tan\Gamma$ — an anhedral panel, a tip error of roughly 72 mm and an $8^\circ$ kink across the root. Nothing errors out; the sketch still solves and still reads fully defined.
+   > **`AX_Long` is not a valid mirror line either.** It lies in `PLN_Incidence` only while `i_wing` is zero. Give the wing any incidence and the axis leaves the sketch plane, so the selection fails regardless of dihedral.
+   > **Do not "fix" this with a second plane.** Adding a `PLN_Incidence_STBD` and redrawing the panel duplicates the driving geometry, and the two halves then drift independently — the exact failure the **one-variable rule** exists to prevent.
+2. Confirm `LAY_Wing_Incidence` reads **fully black** (Fully Defined). Rotate to isometric: the panel climbs in $+Y$ as it runs outboard and rakes aft in $Z$ with the LE sweep. **Exit** the sketch and drag it into `2_LAYOUT_SKETCHES`.
+> **Half-model by design.** The skeleton publishes one side plus the symmetry plane and defers the mirror to the last possible stage. Starboard wing geometry has exactly one consumer — the starboard wing part — so by the **two-consumer test** it does not belong in the skeleton at all. If you later want a full-span *visual* reference here, mirror a **surface body** about the Right Plane (**Insert ▸ Pattern/Mirror ▸ Mirror** ▸ **Bodies to Mirror**), never a sketch; surface bodies carry no mass, so the body-free invariant survives.
+> **Success state:** one sketch holds the entire **port** wing. `AX_MainSpar`, `AX_MainSpar_3D`, `AX_WingJoiner`, `AX_Hinge_Ail`, `AX_Hinge_Flap` and every §7.3 rib plane are promoted from lines inside it, so a single `dihedral` or `sweep_LE` edit re-solves the outline, the spars, the ribs and the hinges together — they can no longer disagree, because they are no longer in separate sketches.
 
 </details>
 <details>
@@ -3362,6 +3366,11 @@ Each is framed as **Detect → Fix → Prevent** so it's actionable when you hit
 - *Detect:* the mirrored half is flipped fore/aft or stacked vertically; wings overlap or splay.
 - *Fix:* delete the bad **Mirror Entities**; redo it with the **Z centerline** as the mirror line.
 - *Prevent:* verify the mirror line is X = 0 before accepting.
+
+**2a. Sketch-mirroring a surface that sits on a rolled plane.** The silent variant of pitfall 2, and the one the symptoms above will **not** catch. **Mirror Entities** reflects across the plane spanned by the mirror line and the sketch-plane normal; on `PLN_Incidence` that plane is rolled off vertical by `dihedral`, so the mirrored half is a valid, fully-defined, *anhedral* panel.
+- *Detect:* **Normal To** `LAY_Front_View` — the two panels form a shallow **X** rather than a **V**; or **Measure** the starboard tip in $Y$ and it reports the negative of the port tip. A fully-defined sketch proves nothing here.
+- *Fix:* delete the mirror. Keep the surface port-only and mirror the finished **component** across the Right Plane in the assembly (§I-6a), or mirror a **surface body** about the Right Plane inside the skeleton — never a sketch.
+- *Prevent:* before any **Mirror Entities**, ask whether the sketch plane is rolled about the longitudinal axis. If it is, the tool is the wrong one (§7.2 Phase B Step 9).
 
 **3. "Locate part with Move/Copy" left checked on Insert Part.** Parts then come in offset and won't mate origin-to-origin.
 - *Detect:* a derived part is displaced from the origin; assembly mates fight you.

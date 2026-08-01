@@ -249,6 +249,64 @@ This maps the tailwheel pushrod / cable trajectory from the steering kingpin for
 </details>
 
 <details>
+<summary><b>I-6a. Starboard side — assembly-level mirror  <i>(from skeleton §7.2)</i></b></summary>
+
+## I-6a. Starboard side — assembly-level mirror  *(from skeleton §7.2)*
+
+The skeleton is a **half-model**: it publishes the port ($+X$) lifting surfaces plus the symmetry plane, and nothing starboard. The mirror happens **here**, at the last possible stage, on finished components — never on skeleton sketches.
+
+> **Why the mirror lives at this layer.** Starboard wing geometry has exactly **one** consumer, the starboard wing part, so the two-consumer test puts it in INSTALLATION by definition. Deferring it also means there is only ever one master per component: edit the port part and the starboard side re-derives, with no second copy of the driving geometry to drift out of step. Skeleton §7.2 Phase B Step 9 explains why the sketch-level mirror it replaces was geometrically wrong.
+
+<details>
+<summary><b>Step 1 — build the port components</b></summary>
+
+1. Derive each wing component from the skeleton the usual way (**Insert ▸ Part**, "Locate part with Move/Copy" **unchecked**, §9.1).
+2. Build **port only**. Wing skin, spar caps, shear web, ribs, joiner, aileron, flap, servo mount, winglet.
+3. Mate the port components into the top-level assembly against the skeleton's published reference geometry.
+
+</details>
+
+<details>
+<summary><b>Step 2 — mirror the components</b></summary>
+
+1. In the top-level assembly, **Insert ▸ Mirror Components**.
+2. **Mirror plane** → the assembly's **Right Plane** ($X = 0$). This is the aircraft symmetry plane and the only correct choice; the rolled `PLN_Incidence` and `PLN_Dihedral` are **not** symmetry planes.
+3. **Components to Mirror** → select the port wing components. Green-check to advance to the orientation page.
+
+</details>
+
+<details>
+<summary><b>Step 3 — choose instance or opposite hand, per component</b></summary>
+
+The orientation page offers two behaviours per component, and the choice is a real engineering decision, not a preference:
+
+| Choose | For | What you get |
+|---|---|---|
+| **Mirrored instance** *(default)* | Parts symmetric about their own mid-plane: most ribs, symmetric bulkheads, hardware, fasteners | Same part file, flipped placement. No new file, no new mass, nothing to maintain. |
+| **Create opposite hand version** | Genuinely chiral parts: wing skin / OML, spar caps, aileron, flap, servo mount, winglet | A new derived part (`…_MIR.SLDPRT`) whose geometry is a true reflection and which rebuilds when its parent changes. |
+
+> **Getting this wrong is silent.** A chiral part taken as a *mirrored instance* looks correct in the graphics area and is geometrically wrong — the airfoil presents backwards. Nothing errors. Decide per component and record the choice.
+
+</details>
+
+<details>
+<summary><b>Step 4 — verify</b></summary>
+
+1. **Normal To** the front view: both panels must climb outboard, forming a **V**. A shallow **X** means something was mirrored across a rolled plane rather than the Right Plane (skeleton §14 pitfall 2a).
+2. **Measure** the starboard tip in $Y$ against the port tip. They must match in sign and magnitude.
+3. Flex-test: change `dihedral` or `sweep_LE` in the equations file, **`Ctrl + Q`**, and confirm both panels move together. If only the port side moves, an opposite-hand part has lost its external reference.
+
+</details>
+
+> **External references are the fragile part.** An opposite-hand version is externally referenced to its parent. Keep both files in the same `Z:` folder, never rename or relocate the parent, and check both into the repository together. A broken path does not error — it freezes the starboard part at its last rebuilt state while the port side keeps moving.
+
+> **The opposite-hand part is left-handed.** Its coordinate system is mirrored. Flag this for anyone exporting to CFD or FEA, and treat it as load-bearing for any directional material: mirroring a unidirectional carbon spar cap or a laid-up skin flips the layup handedness, which is physically real and has to be reflected in the build documentation, not just the CAD.
+
+---
+
+</details>
+
+<details>
 <summary><b>I-7. Validation — installation checks  <i>(from skeleton §13.3.8 / §13.7.6)</i></b></summary>
 
 ## I-7. Validation — installation checks  *(from skeleton §13.3.8 / §13.7.6)*
