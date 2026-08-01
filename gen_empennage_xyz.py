@@ -36,7 +36,7 @@ TRANSFORMS (identical to AIRCRAFT_EMPENNAGE_TRANSFORM_MICRO26.xlsx)
   Vertical tail - span runs +Y, so the span and thickness axes swap. A
   symmetric section at zero incidence means no chord rotation at all:
     X = y * c
-    Y = span + h_tail_top + y_emp_axis
+    Y = span + y_VT_root + y_emp_axis          (y_VT_root is 0 - see note 3)
     Z = -x * c - span*tan(sweep_VT) - x_VT_LE_root
 
 x, y are normalised airfoil coordinates. Aft is -Z, up is +Y, port is +X,
@@ -58,13 +58,20 @@ TWO THINGS THAT ARE EASY TO GET WRONG
    positive-magnitude rule and check.py will fail.
 
 3. VERTICAL DATUM. The empennage sits on AX_Long_Emp, which is y_emp_axis above
-   AX_Long, so both surfaces carry a + y_emp_axis lift. For the HT that is the
-   whole vertical datum - the stabiliser has none of its own. For the VT it is
-   applied ON TOP OF h_tail_top, which is itself measured from the waterline,
-   so the fin root ends up h_tail_top above the boom axis. If the fin is meant
-   to root ON the boom instead, set VT_SEAT_LIFT to 0.0 below and give the fin
-   its own y_VT_root global measured from AX_Long_Emp - do not silently drop
-   y_emp_axis from the HT to compensate.
+   AX_Long, so both surfaces carry a + y_emp_axis lift and BOTH ROOT LEADING
+   EDGES LAND AT THE SAME HEIGHT, y_emp_axis. That is the design intent.
+
+   The fin no longer seats on h_tail_top. h_tail_top is measured from the
+   waterline, so adding it here would put the fin root h_tail_top above the
+   boom axis, with the HT root LE below it. VT_ROOT_SEAT below is the fin-root
+   height measured FROM AX_Long_Emp, and it is 0: the fin roots on the boom
+   axis. It is the placeholder for a y_VT_root global - if the fin ever needs
+   to sit proud of the boom, add that global and read it here instead of
+   hard-coding a number.
+
+   Consequence to watch: h_VT_tip is still defined in the equations file as
+   h_tail_top + b_VT, which no longer describes this geometry. The real fin-top
+   height is y_emp_axis + b_VT. See the flag in the guide.
 """
 
 import argparse
@@ -78,14 +85,13 @@ RAW = "NACA0012_coords_raw.txt"
 # See note 2 in the module docstring. Nose-down stabiliser.
 I_HT_SENSE = -1.0
 
-# See note 3. Set to 0.0 if the fin should root on the boom rather than
-# h_tail_top above it. Does not affect the HT.
-VT_SEAT_LIFT = 1.0
+# Fin-root height measured FROM AX_Long_Emp, not from the waterline. See note 3.
+# Zero puts the VT root LE at exactly the same height as the HT root LE.
+VT_ROOT_SEAT = 0.0
 
 NEEDED = ["c_root_HT", "c_tip_HT", "c_root_VT", "c_tip_VT",
           "b_semi_HT", "b_VT", "i_HT", "sweep_HT", "sweep_VT",
-          "dihedral_HT", "x_HT_LE_root", "x_VT_LE_root", "h_tail_top",
-          "y_emp_axis"]
+          "dihedral_HT", "x_HT_LE_root", "x_VT_LE_root", "y_emp_axis"]
 
 
 def read_globals(path):
@@ -191,8 +197,8 @@ def main():
         print(f"  {k:16} = {P[k]:.6f}")
     print(f"  {'HT incidence':16} = {I_HT_SENSE * P['i_HT']:.6f}   (i_HT with the "
           f"nose-down sense reapplied; see the module docstring)")
-    print(f"  {'vertical lift':16} = {lift:.6f}   (y_emp_axis; VT_SEAT_LIFT = "
-          f"{VT_SEAT_LIFT})")
+    print(f"  {'vertical lift':16} = {lift:.6f}   (y_emp_axis, both surfaces; "
+          f"VT_ROOT_SEAT = {VT_ROOT_SEAT})")
 
     # upper runs TE -> LE, lower runs LE -> TE, sharing both endpoints
     upper = pts[: le + 1]
@@ -208,12 +214,10 @@ def main():
                                   P["sweep_HT"], P["dihedral_HT"], lift)))
         jobs.append((f"airfoil_VT_root_{tag}_xyz.txt",
                      transform_VT(sub, P["c_root_VT"], 0.0, P["sweep_VT"],
-                                  P["h_tail_top"], P["x_VT_LE_root"],
-                                  VT_SEAT_LIFT * lift)))
+                                  VT_ROOT_SEAT, P["x_VT_LE_root"], lift)))
         jobs.append((f"airfoil_VT_tip_{tag}_xyz.txt",
                      transform_VT(sub, P["c_tip_VT"], P["b_VT"], P["sweep_VT"],
-                                  P["h_tail_top"], P["x_VT_LE_root"],
-                                  VT_SEAT_LIFT * lift)))
+                                  VT_ROOT_SEAT, P["x_VT_LE_root"], lift)))
 
     # HT files need the aft station folded in; transform_HT leaves it out so the
     # wing formula stays recognisable. Apply it as the documented "- J1" shift.
