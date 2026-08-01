@@ -2608,54 +2608,168 @@ Flat 2D lines from `LAY_Wing_Plan` and the open loops of `LAY_Side_Profile` cann
 <details>
 <summary><b>8.6 — Empennage OML surfaces (HT &amp; VT airfoil skinning)</b></summary>
 
-The tail wireframes (§5.8/§6.8) and section planes (§7.3.7/§7.3.8) now carry true spar axes, so the empennage skins loft exactly like the wing (§8.4): a symmetric airfoil at root and tip, split into upper/lower streams, guided by 3-D leading- and trailing-edge rails welded to the shared curve vertices. Both `SURF_HTail_OML` and `SURF_VTail_OML` are **reference surfaces — zero mass** (§9.5 golden rule; body-free rule §13.8), so they never break the body-free constraint. Budget ~30 minutes.
+The tail wireframes (§5.8/§6.8) and section planes (§7.3.7/§7.3.8) now carry true spar axes, so the empennage skins loft exactly like the wing (§8.4): a symmetric airfoil at root and tip, split into upper/lower streams, guided by 3-D leading- and trailing-edge rails welded to the shared curve vertices. Both `SURF_HTail_OML` and `SURF_VTail_OML` are **reference surfaces — zero mass** (§9.5 golden rule; body-free rule §13.8), so they never break the body-free constraint. Budget ~60 min.
 
 <details>
 <summary><b>Part A — the symmetric-airfoil Excel transform (NACA 0012)</b></summary>
 
-Reuse the §8.2 Method-A engine with two changes: a symmetric section (equal-and-opposite upper/lower ordinates, zero camber) and one constant that shifts each airfoil **aft** ($-Z$) onto its tail station. Paste the cleaned NACA 0012 loop into Columns **A** / **B** (§8.1), one sheet per surface (HT root, HT tip, VT root, VT tip).
+This is the §8.2 Method-A engine with two changes: a symmetric section (equal-and-opposite upper/lower ordinates, zero camber) and one constant that shifts each airfoil **aft** ($-Z$) onto its tail station. You build **four sheets** — HT root, HT tip, VT root, VT tip — and export **eight** coordinate streams.
 
-* **Master constants (Row 1).** The §8.2 layout, plus one (VT: two) new cells:
-   - `E1` chord — `c_root_HT` / `c_tip_HT` (HT sheets) or `c_root_VT` / `c_tip_VT` (VT sheets).
-   - `F1` incidence — `i_HT` for **both** HT sections (no HT twist global, so root and tip share it); **0** for the VT (a symmetric fin at zero incidence).
-   - `G1` span station — **0** at each root; `b_HT`$/2$ at the HT tip; `b_VT` at the VT tip.
-   - `H1` sweep — `sweep_HT` (HT) or `sweep_VT` (VT).
-   - `I1` dihedral — **0** for both (no empennage dihedral global).
-   - `J1` root-LE station — `x_HT_LE_root` (HT) or `x_VT_LE_root` (VT). **This is the aft shift** that lands the tail airfoils behind the wing.
-   - `K1` (VT sheets only) fin-root seat — `h_tail_top`. Places the VT root section on the crown; it must equal the §6.8.1 root-$Y$ reference.
+<details>
+<summary><b>Step 1 — load and close the NACA 0012 loop</b></summary>
 
-* **Horizontal tail — the wing axis map, shifted aft.** The HT spans laterally ($X$), so it uses the §8.2 Columns C/D/E verbatim, with `J1` folded into the $Z$ column:
-   - **Column C (SW $X$ — spanwise):** `=$G$1` (identical to §8.2).
-   - **Column D (SW $Y$ — thickness + incidence; dihedral term zeroes):** the §8.2 `D3` formula unchanged — with `$I$1` = 0 the dihedral term drops out on its own.
-   - **Column E (SW $Z$ — chord + sweep + tail station):** take the §8.2 `E3` formula and append `- $J$1`:
-     `=(( -A3 - (-0.25) ) * COS(RADIANS($F$1)) - (B3 - 0) * SIN(RADIANS($F$1)) + (-0.25)) * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`
-     > The trailing `- $J$1` slides the whole HT aft ($-Z$) onto the `x_HT_LE_root` station; everything ahead of it is the identical wing rotation/sweep math.
+1. Open a new Excel workbook. **File ▸ Save As** → `Z:\SAE_Micro_2026\05_Sizing\AIRCRAFT_EMPENNAGE_TRANSFORM_MICRO26.xlsx`.
+2. Open your cleaned NACA 0012 coordinate file in **Notepad** (Selig format, TE → LE → TE, one $x\ y$ pair per line — see §8.1 for sourcing and splicing).
+3. Paste the $x_{norm}$ column into **Column A starting at row 3**, and the $y_{norm}$ column into **Column B starting at row 3**. Leave rows 1–2 free for the master constants.
+4. **Verify the loop before going further.** Click cell `A3` — it must read `1` (the trailing edge). Scroll to the last populated row — Column A must read `1` again. Somewhere in the middle Column A must reach its minimum `0`: that is the **LE apex row**. Note its row number; every later step refers to it.
+5. **Close the trailing edge.** Overwrite `B3` with `0`, and overwrite the **last** populated Column B cell with `0`.
+   > **Why this cannot be skipped.** Published coordinate sets almost always carry a small non-zero ordinate at each TE point, so the upper and lower streams end at two *different* points a few hundredths of a chord apart. SolidWorks then imports two curves that do not touch, there is no shared TE vertex for the Part B rails to grab, and the Part C **Knit** fails with an open boundary. The wing pipeline does exactly the same override — see the closed-TE note in §8.1.
+6. Right-click the sheet tab ▸ **Rename** → `HT_Root`. Right-click it again ▸ **Move or Copy…** ▸ tick **Create a copy** ▸ **OK**, three times. Rename the copies `HT_Tip`, `VT_Root`, `VT_Tip`.
 
-* **Vertical tail — the $+Y$-span coordinate swap.** The fin spans **vertically**, so the span and thickness axes trade places versus the wing. A symmetric section at zero incidence means **no chord rotation**, so the columns collapse cleanly:
+</details>
 
-  | SolidWorks axis | Wing / HT (span along $X$) | **VT (span along $+Y$)** |
-  |---|---|---|
-  | $X$ | spanwise station `=$G$1` | **thickness** → `= B3 * $E$1` |
-  | $Y$ | thickness + dihedral | **span station + seat** → `= $G$1 + $K$1` |
-  | $Z$ | chord + sweep | **chord + sweep + tail station** → `= -A3 * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1` |
+<details>
+<summary><b>Step 2 — enter the master constants on each of the four sheets</b></summary>
 
-   - **Column C (SW $X$ — lateral thickness):** `= B3 * $E$1`. The airfoil's $y_{norm}$ thickness becomes the fin's lateral half-thickness; symmetry places the two skins at $\pm$ this value about $X = 0$.
-   - **Column D (SW $Y$ — vertical span):** `= $G$1 + $K$1`. The root row sits at $Y = $ `h_tail_top`; tip rows climb to `h_tail_top + b_VT`.
-   - **Column E (SW $Z$ — chord, sweep rake, tail station):** `= -A3 * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`. The `-A3 * $E$1` runs the chord aft ($-Z$) from LE to TE; `- $G$1 * TAN(sweep_VT)` rakes higher sections aft; `- $J$1` seats the root LE at `x_VT_LE_root`.
-   > **Why no rotation block for the VT.** A NACA 0012 is symmetric and the fin sits at zero incidence, so the quarter-chord pitch rotation the wing/HT applies (the paired `SIN` / `COS` terms) is the identity here — dropping it is exact, not an approximation. If you ever cant the fin or use a cambered section, reinstate the §8.2 rotation block in Columns C/E with the fin's angle.
+Excel cannot read SolidWorks globals, so these are typed as **numbers**. Read each current value from the **Value** column of **Tools ▸ Equations**, or from Appendix A of `Aircraft_Skeleton_Parameters_Micro.md`.
 
-* **Export the eight streams.** Split each sheet at the LE apex row into an **Upper** stream (TE → LE) and a **Lower** stream (LE → TE), the LE row shared by both (§8.1), and save Columns **C/D/E** as UTF-8 text to `Z:\SAE_Micro_2026\05_Sizing\`: `airfoil_HT_root_upper_xyz.txt` / `_lower_`, `airfoil_HT_tip_upper_` / `_lower_`, and the four `airfoil_VT_*` equivalents.
+| Cell | Meaning | `HT_Root` | `HT_Tip` | `VT_Root` | `VT_Tip` |
+|---|---|---|---|---|---|
+| `E1` | chord | `c_root_HT` | `c_tip_HT` | `c_root_VT` | `c_tip_VT` |
+| `F1` | incidence [deg] | `i_HT` | `i_HT` | `0` | `0` |
+| `G1` | span station | `0` | `b_semi_HT` | `0` | `b_VT` |
+| `H1` | LE sweep [deg] | `sweep_HT` | `sweep_HT` | `sweep_VT` | `sweep_VT` |
+| `I1` | dihedral [deg] | `dihedral_HT` | `dihedral_HT` | — | — |
+| `J1` | root-LE station | `x_HT_LE_root` | `x_HT_LE_root` | `x_VT_LE_root` | `x_VT_LE_root` |
+| `K1` | fin-root seat | — | — | `h_tail_top` | `h_tail_top` |
+
+1. Click `E1`, type the chord value, press **Enter**. Repeat across the row for `F1` through `J1` (and `K1` on the two VT sheets).
+2. Repeat on all four sheets. `J1` is **identical on both sheets of a surface** — it stations the whole surface, not the individual section.
+3. In `A1` of each sheet, type a label (e.g. `HT root — NACA 0012`) so a stray sheet cannot be exported into the wrong file.
+
+> **`i_HT` applies to both HT sections.** There is no HT twist global, so root and tip share one incidence. `F1` is **0** on both VT sheets — a symmetric fin at zero incidence.
+> **`J1` is the aft shift.** It is what lands the tail airfoils behind the wing, at `x_HT_LE_root` / `x_VT_LE_root`. Everything ahead of it in the formulas is the identical wing rotation/sweep math.
+> **`K1` seats the fin.** It places the VT root section on the crown and it must equal the §6.8.1 root-$Y$ reference. If `h_tail_top` is ever renamed, `K1` has to follow.
+> **This workbook is a manual copy, and it will go stale.** The wing has `gen_airfoil_xyz.py`, which regenerates its four curve files straight from `skeleton_equations_micro.txt`. The empennage has no equivalent, so every one of the constants above is a second, unlinked copy of a global. Re-enter them and re-export the eight streams **whenever a tail global changes** — `S_HT`, `AR_HT`, `V_H`, `l_HT` and `taper_HT` all move `c_root_HT` and `b_HT` without touching this sheet.
+
+</details>
+
+<details>
+<summary><b>Step 3 — build the HT transform columns</b></summary>
+
+The HT spans laterally ($X$), so it uses the §8.2 Columns C/D/E verbatim, with `J1` folded into the $Z$ column. Work on `HT_Root` first.
+
+1. **Column C (SolidWorks $X$ — spanwise station).** Click `C3`, type `=$G$1`, press **Enter**.
+2. **Column D (SolidWorks $Y$ — thickness, incidence rotation, dihedral).** Click `D3` and type the §8.2 `D3` formula unchanged:
+   `=(( -A3 - (-0.25) ) * SIN(RADIANS($F$1)) + (B3 - 0) * COS(RADIANS($F$1)) - 0.25 * SIN(RADIANS($F$1))) * $E$1 + ($G$1 * TAN(RADIANS($I$1)))`
+   > With `dihedral_HT` at zero the `TAN(RADIANS($I$1))` term evaluates to zero and drops out on its own. Leave it in the formula: if the stabilizer is ever given dihedral, the sheet follows the global with no re-derivation.
+3. **Column E (SolidWorks $Z$ — chord, incidence rotation, sweep, tail station).** Click `E3` and type the §8.2 `E3` formula with `- $J$1` appended:
+   `=(( -A3 - (-0.25) ) * COS(RADIANS($F$1)) - (B3 - 0) * SIN(RADIANS($F$1)) + (-0.25)) * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`
+   > The trailing `- $J$1` slides the whole HT aft ($-Z$) onto the `x_HT_LE_root` station.
+4. Select `C3:E3`, press **`Ctrl + C`**. Click `C4`, scroll to the last coordinate row, hold **`Shift`** and click its `E` cell, press **`Ctrl + V`**. All three columns now cover every point.
+5. Switch to the `HT_Tip` sheet and repeat steps 1–4 identically. The formulas are the same; only the Row 1 constants differ.
+
+> **One transform, two streams.** The upper and lower halves of the airfoil use the *same* C/D/E columns — you split the section at **export** (Step 6), not with different formulas.
+
+</details>
+
+<details>
+<summary><b>Step 4 — build the VT transform columns (the span-axis swap)</b></summary>
+
+The fin spans **vertically**, so the span and thickness axes trade places versus the wing. A symmetric section at zero incidence means **no chord rotation**, so the columns collapse cleanly:
+
+| SolidWorks axis | Wing / HT (span along $X$) | **VT (span along $+Y$)** |
+|---|---|---|
+| $X$ | spanwise station `=$G$1` | **thickness** → `= B3 * $E$1` |
+| $Y$ | thickness + dihedral | **span station + seat** → `= $G$1 + $K$1` |
+| $Z$ | chord + sweep | **chord + sweep + tail station** → `= -A3 * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1` |
+
+Work on `VT_Root` first.
+
+1. **Column C (SolidWorks $X$ — lateral thickness).** Click `C3`, type `= B3 * $E$1`, press **Enter**. The airfoil's $y_{norm}$ thickness becomes the fin's lateral half-thickness; symmetry places the two skins at $\pm$ this value about $X = 0$.
+2. **Column D (SolidWorks $Y$ — vertical span station).** Click `D3`, type `= $G$1 + $K$1`, press **Enter**. Every row on the root sheet reads the same value — the fin root sits at $Y =$ `h_tail_top`; the tip sheet climbs to `h_tail_top` + `b_VT`, which is `h_VT_tip`.
+3. **Column E (SolidWorks $Z$ — chord, sweep rake, tail station).** Click `E3`, type
+   `= -A3 * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`
+   and press **Enter**. The `-A3 * $E$1` runs the chord aft ($-Z$) from LE to TE; the `TAN(RADIANS($H$1))` term rakes higher sections aft with `sweep_VT`; `- $J$1` seats the root LE at `x_VT_LE_root`.
+4. Select `C3:E3`, **`Ctrl + C`**, then select `C4` through the last row's `E` cell and **`Ctrl + V`**.
+5. Switch to `VT_Tip` and repeat steps 1–4.
+
+> **Why there is no rotation block for the VT.** A NACA 0012 is symmetric and the fin sits at zero incidence, so the quarter-chord pitch rotation the wing/HT applies (the paired `SIN` / `COS` terms) is the identity here — dropping it is exact, not an approximation. If you ever cant the fin or move to a cambered section, reinstate the §8.2 rotation block in Columns C/E with the fin's angle.
+
+</details>
+
+<details>
+<summary><b>Step 5 — check the four sheets before exporting</b></summary>
+
+Every value below is **informational**, not a source of truth — recompute from the current globals if they have moved. Catching an error here costs a minute; catching it after the loft costs the whole section.
+
+1. **HT_Root, Column C** — constant `0` on every row (the root sits on the symmetry plane).
+2. **HT_Tip, Column C** — constant *(≈207.30)* on every row, matching `b_semi_HT`.
+3. **HT_Root, Column E at the LE apex row** — *(≈ −848.1)*. Negative, because the HT root LE sits `x_HT_LE_root` **aft ($-Z$)** of the Origin. A positive number means `J1` was entered with the wrong sign or omitted.
+4. **VT_Root, Column D** — constant *(≈35.79)*, matching `h_tail_top`. **VT_Tip, Column D** — constant *(≈242.88)*, matching `h_VT_tip`.
+5. **VT_Root, Column C** — peaks at roughly *(≈10.5)* and is **equal and opposite** either side of the LE apex row. If the two halves are not mirror images, the pasted section is not symmetric and is not a NACA 0012.
+6. **All four sheets** — the first and last rows of Column D (HT) or Column C (VT) must be *identical*, which is the closed TE from Step 1 surviving the transform.
+
+</details>
+
+<details>
+<summary><b>Step 6 — export the eight coordinate streams</b></summary>
+
+Each sheet exports **twice**, split at the LE apex row, with that row **included in both** slices.
+
+1. **HT root — upper.** On `HT_Root`, select **Columns C, D and E from row 3 down through the LE apex row** (no headers). Press **`Ctrl + C`**, paste into a clean **Notepad** window (it arrives tab-delimited), then **File ▸ Save As** → `Z:\SAE_Micro_2026\05_Sizing\airfoil_HT_root_upper_xyz.txt`, **Encoding: UTF-8**, **Save**.
+2. **HT root — lower.** Back on `HT_Root`, select Columns C/D/E **from the LE apex row down through the last coordinate row** — the LE apex row is included **again**, as the shared boundary anchor. Copy, paste into Notepad, save as `airfoil_HT_root_lower_xyz.txt`.
+3. **HT tip.** Repeat both slices on `HT_Tip` → `airfoil_HT_tip_upper_xyz.txt` (TE → LE) and `airfoil_HT_tip_lower_xyz.txt` (LE → TE).
+4. **VT root and VT tip.** Repeat both slices on each VT sheet → `airfoil_VT_root_upper_xyz.txt`, `airfoil_VT_root_lower_xyz.txt`, `airfoil_VT_tip_upper_xyz.txt`, `airfoil_VT_tip_lower_xyz.txt`.
+5. Open one saved file in Notepad and confirm three tab-separated numeric columns, no header line, no blank final line beyond a single newline.
+
+> **Eight files, one LE row shared per airfoil.** Each upper file *ends* on the exact LE point its lower file *begins* on, and both start and end on the identical closed TE point. That double coincidence is what welds the imported curves into selectable nose and tail vertices (§8.3) — never trim the shared rows to "de-duplicate."
+
+</details>
 
 </details>
 
 <details>
 <summary><b>Part B — import the eight curves and build the tail guide rails</b></summary>
 
-1. **Insert ▸ Curve ▸ Curve Through XYZ Points** for each of the eight files (§8.2 Step 4). Rename: `CRV_HT_Root_Upper` / `_Lower`, `CRV_HT_Tip_Upper` / `_Lower`, `CRV_VT_Root_Upper` / `_Lower`, `CRV_VT_Tip_Upper` / `_Lower`.
-   > Symmetric sections still split upper/lower — the shared LE/TE rows weld each pair into snappable nose and tail **vertices** (§8.3), which is what the rails grab. A single closed spline gives the rails nothing to bite at the nose.
-2. **HT rails (`LAY_HT_Guides_3D`).** Open a **3D Sketch** (**F2** → `LAY_HT_Guides_3D`). With the **Line** tool: click the **root nose vertex** (where `CRV_HT_Root_Upper` / `_Lower` meet) → the **tip nose vertex** (`CRV_HT_Tip_*`) for the **LE rail**; then the **root TE vertex** → **tip TE vertex** for the **TE rail**. Each line fully defines on contact — both ends welded to curve vertices. **Exit**; drag into `2_LAYOUT_SKETCHES`.
-3. **VT rails (`LAY_VT_Guides_3D`).** Same, on the fin curves: LE rail root-nose → tip-nose, TE rail root-TE → tip-TE. These rails **rise in $+Y$ and rake aft in $-Z$** — the fin's swept edges. Confirm both black; **Exit**; file in `2_LAYOUT_SKETCHES`.
-   > **Endpoint stability.** Every rail endpoint welds to a real curve vertex, so re-exporting a tail airfoil rebuilds the curves and the rails ride along — no `->x` (§8.4).
+<details>
+<summary><b>Step 1 — import the eight curves</b></summary>
+
+1. Click **Insert ▸ Curve ▸ Curve Through XYZ Points**.
+2. Click **Browse**, set the file-type filter to **Text Files (*.txt)**, navigate to `Z:\SAE_Micro_2026\05_Sizing\`, select `airfoil_HT_root_upper_xyz.txt`, click **Open**.
+3. Scan the preview table for blank or `#REF!` rows, then click **OK**.
+4. Select the new curve in the FeatureManager tree, press **F2**, rename it exactly `CRV_HT_Root_Upper`.
+5. Repeat steps 1–4 for the remaining seven files, renaming each to match: `CRV_HT_Root_Lower`, `CRV_HT_Tip_Upper`, `CRV_HT_Tip_Lower`, `CRV_VT_Root_Upper`, `CRV_VT_Root_Lower`, `CRV_VT_Tip_Upper`, `CRV_VT_Tip_Lower`.
+6. Press **`Ctrl + 7`** for an isometric view and confirm two flat lens-shaped sections aft of the wing and two vertical ones above them.
+
+> **Symmetric sections still split upper/lower.** The shared LE/TE rows weld each pair into snappable nose and tail **vertices** (§8.3), which is what the rails grab. A single closed spline gives the rails nothing to bite at the nose.
+
+</details>
+
+<details>
+<summary><b>Step 2 — build the HT guide rails (<code>LAY_HT_Guides_3D</code>)</b></summary>
+
+1. On the **Sketch** tab, click the drop-down arrow beneath **Sketch** and choose **3D Sketch**.
+2. Press **`L`** for the **Line** tool.
+3. **LE rail.** Hover the **root nose vertex** — the point where `CRV_HT_Root_Upper` and `CRV_HT_Root_Lower` meet — until the endpoint cursor appears, and click. Move to the **tip nose vertex** (`CRV_HT_Tip_Upper` / `_Lower`) and click. Press **`Esc`**.
+4. **TE rail.** Press **`L`** again. Click the **root TE vertex**, then the **tip TE vertex**. Press **`Esc`**.
+5. Confirm both lines are **black**. Each fully defines on contact, because both endpoints are welded to real curve vertices — no dimension is needed or wanted.
+6. **Exit** the sketch, press **F2**, rename `LAY_HT_Guides_3D`, and drag it into `2_LAYOUT_SKETCHES`.
+
+</details>
+
+<details>
+<summary><b>Step 3 — build the VT guide rails (<code>LAY_VT_Guides_3D</code>)</b></summary>
+
+1. Open a second **3D Sketch** as in Step 2.
+2. **LE rail.** Press **`L`**, click the fin's **root nose vertex**, then its **tip nose vertex**. Press **`Esc`**.
+3. **TE rail.** Press **`L`**, click the **root TE vertex**, then the **tip TE vertex**. Press **`Esc`**.
+4. Rotate to isometric: both rails must **rise in $+Y$ and rake aft ($-Z$)** — the fin's swept edges. A rail that rises without raking means `H1` was left at zero on the VT sheets.
+5. Confirm both black, **Exit**, **F2** → `LAY_VT_Guides_3D`, and file it in `2_LAYOUT_SKETCHES`.
+
+> **Endpoint stability.** Every rail endpoint welds to a real curve vertex, so re-exporting a tail airfoil rebuilds the curves and the rails ride along — no `->x` (§8.4).
+
+</details>
 
 </details>
 
@@ -2663,14 +2777,50 @@ Reuse the §8.2 Method-A engine with two changes: a symmetric section (equal-and
 <summary><b>Part C — loft <code>SURF_HTail_OML</code> and <code>SURF_VTail_OML</code></b></summary>
 
 Skin upper and lower separately, then knit — identical to the wing (§8.4 Steps 2–4).
-* **Horizontal tail.**
-  1. **Insert ▸ Surface ▸ Loft…**; **Profiles** = `CRV_HT_Root_Upper` then `CRV_HT_Tip_Upper`, each clicked near its **LE vertex** so the green sync handles anchor LE-to-LE (a mismatched pick corkscrews the skin — §14 item 20).
-  2. **Guide Curves** = the LE and TE rails of `LAY_HT_Guides_3D`. Green-check; rename `SURF_HTail_OML_Upper`.
-  3. Repeat with the two `_Lower` curves → `SURF_HTail_OML_Lower`.
-  4. **Insert ▸ Surface ▸ Knit…**, select both skins, leave **Merge entities** checked, green-check; rename `SURF_HTail_OML`.
-* **Vertical tail.** Repeat exactly on the VT curves and `LAY_VT_Guides_3D` rails → `SURF_VTail_OML_Upper` / `_Lower`, knit → `SURF_VTail_OML`.
-  > **Sync-handle audit (fin).** Because the fin sections stack in $+Y$, drag each profile's green connector to the **same** vertex (both LE) before accepting — the vertical stack makes a top-vs-side mismatch easy to miss, and it twists the skin (§14 item 20).
-* **File & verify.** Drag `SURF_HTail_OML`, `SURF_VTail_OML` (and the `_Upper` / `_Lower` skins if kept) plus all eight `CRV_*` tail curves into `7_SURFACES`. Then run the §8.8 mass-properties audit: the **Solid Bodies** folder must stay empty and mass must read **0.00 g** — surfaces are weightless reference geometry (§9.5 golden rule).
+
+<details>
+<summary><b>Step 1 — loft the HT upper and lower skins</b></summary>
+
+1. Click **Insert ▸ Surface ▸ Loft…**
+2. Click inside the **Profiles** box. In the graphics area click `CRV_HT_Root_Upper` **near its LE vertex**, then click `CRV_HT_Tip_Upper` **near its LE vertex**.
+3. Check the green **sync handles** in the preview: one connector per profile, both sitting at the LE. Drag either handle onto the LE vertex if it landed elsewhere — a mismatched pick corkscrews the skin (§14 item 20).
+4. Click inside the **Guide Curves** box and select the **LE rail**, then the **TE rail**, from `LAY_HT_Guides_3D`.
+5. Click the **Green Checkmark** $(\checkmark)$. Press **F2**, rename `SURF_HTail_OML_Upper`.
+6. Repeat steps 1–5 with `CRV_HT_Root_Lower` and `CRV_HT_Tip_Lower` and the same two rails → `SURF_HTail_OML_Lower`.
+
+</details>
+
+<details>
+<summary><b>Step 2 — knit the horizontal tail</b></summary>
+
+1. Click **Insert ▸ Surface ▸ Knit…**
+2. Click inside the **Surfaces and Faces to Knit** box and select both `SURF_HTail_OML_Upper` and `SURF_HTail_OML_Lower` from the tree.
+3. Leave **Merge entities** checked. Click the **Green Checkmark**.
+4. Press **F2**, rename `SURF_HTail_OML`.
+
+> **If the knit fails** with an open boundary, the trailing edge did not close: return to Part A Step 1 and confirm both TE ordinates were overwritten to zero on that sheet, then re-export and re-import.
+
+</details>
+
+<details>
+<summary><b>Step 3 — loft and knit the vertical tail</b></summary>
+
+1. Repeat Part C Step 1 exactly on `CRV_VT_Root_Upper` / `CRV_VT_Tip_Upper` with the `LAY_VT_Guides_3D` rails → `SURF_VTail_OML_Upper`; then the `_Lower` pair → `SURF_VTail_OML_Lower`.
+2. Repeat Part C Step 2 on the two fin skins → `SURF_VTail_OML`.
+
+> **Sync-handle audit (fin).** Because the fin sections stack in $+Y$, drag each profile's green connector to the **same** vertex (both LE) before accepting — the vertical stack makes a top-vs-side mismatch easy to miss, and it twists the skin (§14 item 20).
+
+</details>
+
+<details>
+<summary><b>Step 4 — file the geometry and audit the mass</b></summary>
+
+1. In the FeatureManager tree, hold **`Ctrl`** and select `SURF_HTail_OML`, `SURF_VTail_OML`, the four `_Upper` / `_Lower` skins if you kept them, and all eight `CRV_*` tail curves.
+2. Drag the selection into the `7_SURFACES` folder.
+3. Run the §8.8 mass-properties audit: **Tools ▸ Evaluate ▸ Mass Properties**. Mass must read **0.00 g**, and the **Solid Bodies** folder in the tree must be empty — surfaces are weightless reference geometry (§9.5 golden rule).
+4. Press **`Ctrl + Q`** for a forced rebuild and confirm no errors on any of the eight curves, two 3D sketches, six surfaces or two knits.
+
+</details>
 
 </details>
 </details>
