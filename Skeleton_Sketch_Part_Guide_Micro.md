@@ -2652,6 +2652,7 @@ Excel cannot read SolidWorks globals, so these are typed as **numbers**. Read ea
 > **`J1` is the aft shift.** It is what lands the tail airfoils behind the wing, at `x_HT_LE_root` / `x_VT_LE_root`. Everything ahead of it in the formulas is the identical wing rotation/sweep math.
 > **`L1` is the empennage vertical datum, and it is the same on all four sheets.** The whole tail is referenced to `AX_Long_Emp`, which sits `y_emp_axis` above `AX_Long` (§5.8.1). Both root leading edges therefore land at the **same height**, $Y =$ `y_emp_axis` — that is the design intent, so never change `L1` on one surface alone. For the HT it is the only vertical datum the stabilizer has.
 > **`K1` is measured from `AX_Long_Emp`, not from the waterline.** It is the fin-root height *above the boom axis*, and it is **zero**: the fin roots on the boom. It is deliberately **not** `h_tail_top` — that global is measured from the waterline, and using it here stacks two datums and pushes the fin root above the HT root LE. `K1` is the placeholder for a future `y_VT_root` global; if the fin ever needs to sit proud of the boom, add the global and read `K1` from it rather than typing a number.
+> **`H1` on the VT sheets is a LEADING-EDGE sweep.** Every sweep global in this model is measured at the LE — `sweep_LE`, `sweep_HT`, `sweep_VT` alike. XFLR5 reports a fin's *"Root to Tip Sweep"* at the **quarter chord**, which is a different and smaller number for the same fin. Converting: $\Lambda_{LE} = \arctan(\Delta x_{LE} / b_{VT})$ from the section offset, not the reported angle. Feeding a $c/4$ figure into `H1` builds a fin whose trailing edge rakes *forward*.
 > **flag — `h_VT_tip` no longer describes this geometry.** It is still defined as `h_tail_top` + `b_VT`, which described the old waterline-seated fin. With the fin on the boom axis the true fin-top height is `y_emp_axis` + `b_VT`. Nothing in §8.6 consumes `h_VT_tip`; check §6.8 and §13 before trusting it.
 > **This workbook is a manual copy, and it will go stale.** The wing has `gen_airfoil_xyz.py`, which regenerates its four curve files straight from `skeleton_equations_micro.txt`. The empennage has no equivalent, so every one of the constants above is a second, unlinked copy of a global. Re-enter them and re-export the eight streams **whenever a tail global changes** — `S_HT`, `AR_HT`, `V_H`, `l_HT` and `taper_HT` all move `c_root_HT` and `b_HT` without touching this sheet.
 
@@ -2710,9 +2711,10 @@ Every value below is **informational**, not a source of truth — recompute from
 2. **HT_Tip, Column C** — constant *(≈207.30)* on every row, matching `b_semi_HT`.
 3. **HT_Root, Column E at the LE apex row** — *(≈ −848.1)*. Negative, because the HT root LE sits `x_HT_LE_root` **aft ($-Z$)** of the Origin. A positive number means `J1` was entered with the wrong sign or omitted.
 4. **HT_Root, Column D at the LE apex row** — reads exactly `y_emp_axis`. This is the single most useful check on the sheet: a zero here means `L1` was left empty and the stabilizer will build on the waterline.
-5. **VT_Root, Column D** — constant, and **identical to the HT_Root Column D value from check 4**. Both root leading edges sit on `AX_Long_Emp`; if these two numbers differ, one surface has the wrong `K1` or `L1`. **VT_Tip, Column D** — constant *(≈232.09)*, which is `y_emp_axis` plus `b_VT`.
-6. **VT_Root, Column C** — peaks at roughly *(≈10.5)* and is **equal and opposite** either side of the LE apex row. If the two halves are not mirror images, the pasted section is not symmetric and is not a NACA 0012.
-7. **All four sheets** — the first and last rows of Column D (HT) or Column C (VT) must be *identical*, which is the closed TE from Step 1 surviving the transform.
+5. **VT_Root, Column D** — constant, and **identical to the HT_Root Column D value from check 4**. Both root leading edges sit on `AX_Long_Emp`; if these two numbers differ, one surface has the wrong `K1` or `L1`. **VT_Tip, Column D** — constant, and equal to `y_emp_axis` plus `b_VT`.
+6. **Both VT sheets, Column E at the TE row** — the **same** value on root and tip. The fin is drawn with an unswept trailing edge, so this is what makes the §8.6 Part B TE rail vertical. If they differ, `H1` is carrying a quarter-chord sweep instead of a leading-edge one.
+7. **VT_Root, Column C** — peaks at roughly *(≈10.2)* and is **equal and opposite** either side of the LE apex row. If the two halves are not mirror images, the pasted section is not symmetric and is not a NACA 0012.
+8. **All four sheets** — the first and last rows of Column D (HT) or Column C (VT) must be *identical*, which is the closed TE from Step 1 surviving the transform.
 
 </details>
 
@@ -2768,7 +2770,7 @@ Each sheet exports **twice**, split at the LE apex row, with that row **included
 1. Open a second **3D Sketch** as in Step 2.
 2. **LE rail.** Press **`L`**, click the fin's **root nose vertex**, then its **tip nose vertex**. Press **`Esc`**.
 3. **TE rail.** Press **`L`**, click the **root TE vertex**, then the **tip TE vertex**. Press **`Esc`**.
-4. Rotate to isometric: both rails must **rise in $+Y$ and rake aft ($-Z$)** — the fin's swept edges. A rail that rises without raking means `H1` was left at zero on the VT sheets.
+4. Rotate to isometric and check the two rails **separately**: the **LE rail** rises in $+Y$ and rakes aft ($-Z$) at `sweep_VT`; the **TE rail** is **vertical — parallel to the $Y$ axis**. A TE rail that rakes aft means `H1` is too small; one that rakes *forward* means `H1` is carrying XFLR5's quarter-chord sweep instead of the leading-edge value.
 5. Confirm both black, **Exit**, **F2** → `LAY_VT_Guides_3D`, and file it in `2_LAYOUT_SKETCHES`.
 
 > **Endpoint stability.** Every rail endpoint welds to a real curve vertex, so re-exporting a tail airfoil rebuilds the curves and the rails ride along — no `->x` (§8.4).

@@ -496,11 +496,11 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "x_spar_tip_HT_inc"     = "x_spar_tip_HT" / cos("i_HT" * pi/180)   'HT SPAR TIP: in-plane chordwise dist from the HT tip LE on PLN_Incidence_HT [mm]
 "x_HT_spar_root"        = "x_HT_LE_root" + "spar_main_pct" * "c_root_HT"   'HT SPAR ROOT: dist to Front Plane, aft (-Z) [mm]
 "x_HT_spar_tip"         = "x_HT_LE_root" + "b_semi_HT" * tan("sweep_HT" * pi/180) + "spar_main_pct" * "c_tip_HT"   'HT SPAR TIP: dist to Front Plane, aft (-Z) [mm]
-"V_V"           = 0.073     'vertical tail volume coeff
+"V_V"                   = 0.06815375   'vertical tail volume coeff; back-solved from the XFLR5 fin (S_VT 26000)'
 "l_VT"          = 780        'wing c/4 -> VT c/4 arm [mm]; yields x_VT_LE_root = 850 aft (matches XFLR5 LE-to-LE)
-"AR_VT"         = 1.54
-"taper_VT"      = 0.53
-"sweep_VT"      = 16.70
+"AR_VT"                 = 1.53846154   'fin aspect ratio = b_VT^2/S_VT from XFLR5 (200^2 / 26000)'
+"taper_VT"              = 0.52941176   'fin taper = c_tip_VT/c_root_VT from XFLR5 (90 / 170)'
+"sweep_VT"              = 21.8014095   'fin LE sweep [deg] = arctan(80/200) from XFLR5; NOT its c/4 sweep of 16.70'
 "c_rud_pct"     = 0.40
 "S_VT"          = "V_V" * "S_w" * "b" / "l_VT"
 "b_VT"          = sqr("AR_VT" * "S_VT")
