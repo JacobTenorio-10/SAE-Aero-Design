@@ -2661,15 +2661,18 @@ Excel cannot read SolidWorks globals, so these are typed as **numbers**. Read ea
 <details>
 <summary><b>Step 3 — build the HT transform columns</b></summary>
 
-The HT spans laterally ($X$), so it uses the §8.2 Columns C/D/E verbatim, with `J1` folded into the $Z$ column. Work on `HT_Root` first.
+The HT spans laterally ($X$), so it reuses the §8.2 axis map, with `J1` folded into the $Z$ column. **One deliberate difference from the wing: these sections rotate about the section _leading edge_, not the quarter chord.** Work on `HT_Root` first.
+
+> **Why the pivot differs from §8.2.** XFLR5 applies a surface **tilt angle** by rotating about the surface root LE, and the HT and VT root leading edges are supposed to meet. A quarter-chord pivot slides the stabilizer $0.25\,c(1-\cos i)$ off its own `x_HT_LE_root` station and opens a gap against the fin; the LE pivot lands it exactly. What remains between the two trailing edges is $c(1-\cos i)$, which is unavoidable — tilting one surface and not the other means the two edges cannot both coincide — and XFLR5 carries the same residual. The two conventions are identical at zero incidence, and the VT sheets are unaffected because the fin has no tilt.
 
 1. **Column C (SolidWorks $X$ — spanwise station).** Click `C3`, type `=$G$1`, press **Enter**.
-2. **Column D (SolidWorks $Y$ — thickness, incidence rotation, dihedral).** Click `D3` and type the §8.2 `D3` formula unchanged:
-   `=(( -A3 - (-0.25) ) * SIN(RADIANS($F$1)) + (B3 - 0) * COS(RADIANS($F$1)) - 0.25 * SIN(RADIANS($F$1))) * $E$1 + ($G$1 * TAN(RADIANS($I$1))) + $L$1`
+2. **Column D (SolidWorks $Y$ — thickness, incidence rotation, dihedral).** Click `D3` and type:
+   `=(( -A3 ) * SIN(RADIANS($F$1)) + (B3 - 0) * COS(RADIANS($F$1))) * $E$1 + ($G$1 * TAN(RADIANS($I$1))) + $L$1`
+   > This is the §8.2 `D3` formula with its two $0.25\sin i$ terms cancelled — they always did cancel, so the $Y$ column was never quarter-chord-pivoted in the first place. Only $Z$ changes behaviour.
    > With `dihedral_HT` at zero the `TAN(RADIANS($I$1))` term evaluates to zero and drops out on its own. Leave it in the formula: if the stabilizer is ever given dihedral, the sheet follows the global with no re-derivation. The trailing `+ $L$1` lifts the chord plane onto `AX_Long_Emp` — without it the stabilizer builds on the waterline, `y_emp_axis` too low.
-3. **Column E (SolidWorks $Z$ — chord, incidence rotation, sweep, tail station).** Click `E3` and type the §8.2 `E3` formula with `- $J$1` appended:
-   `=(( -A3 - (-0.25) ) * COS(RADIANS($F$1)) - (B3 - 0) * SIN(RADIANS($F$1)) + (-0.25)) * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`
-   > The trailing `- $J$1` slides the whole HT aft ($-Z$) onto the `x_HT_LE_root` station.
+3. **Column E (SolidWorks $Z$ — chord, incidence rotation, sweep, tail station).** Click `E3` and type:
+   `=(( -A3 ) * COS(RADIANS($F$1)) - (B3 - 0) * SIN(RADIANS($F$1))) * $E$1 - ($G$1 * TAN(RADIANS($H$1))) - $J$1`
+   > This is where the pivot lives. The §8.2 wing formula carries a `+ (-0.25)` constant that offsets the quarter-chord rotation; dropping it moves the pivot to the leading edge. The trailing `- $J$1` then slides the whole HT aft ($-Z$) onto the `x_HT_LE_root` station, and because the LE is now the pivot, the root LE lands on that station **exactly**.
 4. Select `C3:E3`, press **`Ctrl + C`**. Click `C4`, scroll to the last coordinate row, hold **`Shift`** and click its `E` cell, press **`Ctrl + V`**. All three columns now cover every point.
 5. Switch to the `HT_Tip` sheet and repeat steps 1–4 identically. The formulas are the same; only the Row 1 constants differ.
 
@@ -2708,8 +2711,8 @@ Work on `VT_Root` first.
 Every value below is **informational**, not a source of truth — recompute from the current globals if they have moved. Catching an error here costs a minute; catching it after the loft costs the whole section.
 
 1. **HT_Root, Column C** — constant `0` on every row (the root sits on the symmetry plane).
-2. **HT_Tip, Column C** — constant *(≈207.30)* on every row, matching `b_semi_HT`.
-3. **HT_Root, Column E at the LE apex row** — *(≈ −848.1)*. Negative, because the HT root LE sits `x_HT_LE_root` **aft ($-Z$)** of the Origin. A positive number means `J1` was entered with the wrong sign or omitted.
+2. **HT_Tip, Column C** — constant on every row, matching `b_semi_HT`.
+3. **HT_Root, Column E at the LE apex row** — the **exact negative of `J1`**, to the last decimal place. That exactness is the whole point of the leading-edge pivot, and it is the sharpest test on the sheet: any residual means the `+ (-0.25)` constant survived from the §8.2 formula. It must also equal the VT root LE value, since the two surfaces share a station.
 4. **HT_Root, Column D at the LE apex row** — reads exactly `y_emp_axis`. This is the single most useful check on the sheet: a zero here means `L1` was left empty and the stabilizer will build on the waterline.
 5. **VT_Root, Column D** — constant, and **identical to the HT_Root Column D value from check 4**. Both root leading edges sit on `AX_Long_Emp`; if these two numbers differ, one surface has the wrong `K1` or `L1`. **VT_Tip, Column D** — constant, and equal to `y_emp_axis` plus `b_VT`.
 6. **Both VT sheets, Column E at the TE row** — the **same** value on root and tip. The fin is drawn with an unswept trailing edge, so this is what makes the §8.6 Part B TE rail vertical. If they differ, `H1` is carrying a quarter-chord sweep instead of a leading-edge one.

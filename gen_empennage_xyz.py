@@ -23,11 +23,19 @@ Insert > Curve > Curve Through XYZ Points expects):
 
 TRANSFORMS (identical to AIRCRAFT_EMPENNAGE_TRANSFORM_MICRO26.xlsx)
 
-  Horizontal tail - the wing/HT axis map, shifted aft by J1:
+  Horizontal tail - rotated about the section LEADING EDGE, shifted aft by J1:
     X = span
-    Y = [ (0.25 - x)*sin(i) + y*cos(i) - 0.25*sin(i) ] * c + span*tan(dihedral_HT)
-        + y_emp_axis
-    Z = [ (0.25 - x)*cos(i) - y*sin(i) - 0.25     ] * c - span*tan(sweep_HT) - x_HT_LE_root
+    Y = [ -x*sin(i) + y*cos(i) ] * c + span*tan(dihedral_HT) + y_emp_axis
+    Z = [ -x*cos(i) - y*sin(i) ] * c - span*tan(sweep_HT) - x_HT_LE_root
+
+  NOTE THE PIVOT. The wing (gen_airfoil_xyz.py, guide 8.2) rotates its sections
+  about the QUARTER CHORD. The empennage rotates about the section LEADING
+  EDGE, matching how XFLR5 applies a surface tilt angle. The two conventions
+  differ by a rigid chordwise shift of 0.25*c*(1 - cos i) - 0.0259 mm at the
+  current i_HT and c_root_HT - and the LE-pivot form is what puts the HT root
+  leading edge exactly on x_HT_LE_root, where the VT root leading edge also
+  sits. Do not "unify" the two without re-checking that intersection.
+  Both forms are identical at zero incidence.
 
   ...and both surfaces are then lifted by y_emp_axis, because the empennage is
   referenced to AX_Long_Emp (the boom axis, y_emp_axis above AX_Long), not to
@@ -150,13 +158,14 @@ def read_airfoil(path):
 
 
 def transform_HT(pts, chord, incidence, span, sweep, dihedral, lift):
+    """Rotation about the section LEADING EDGE - see the pivot note above."""
     i = math.radians(incidence)
     si, ci = math.sin(i), math.cos(i)
     dy = span * math.tan(math.radians(dihedral)) + lift
     dz = span * math.tan(math.radians(sweep))
     return [(span,
-             ((0.25 - x) * si + y * ci - 0.25 * si) * chord + dy,
-             ((0.25 - x) * ci - y * si - 0.25) * chord - dz)
+             (-x * si + y * ci) * chord + dy,
+             (-x * ci - y * si) * chord - dz)
             for x, y in pts]
 
 
