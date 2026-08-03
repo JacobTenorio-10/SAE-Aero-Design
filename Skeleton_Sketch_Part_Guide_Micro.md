@@ -994,7 +994,7 @@ Same two-projection rule as the wing (§7.2 Phase B): **spanwise** distances use
 <summary><b>Phase C — promote to <code>AX_HTspar_3D</code></b></summary>
 
 1. **Insert ▸ Reference Geometry ▸ Axis**, **One Line/Edge/Axis**, click the HT spar construction line inside `LAY_HTail_Incidence`, green-check, **F2** → `AX_HTspar_3D`. File it in `4_AXES` (§7.2).
-> **Success state:** one sketch holds the whole stabilizer, sitting `y_emp_axis` above the wing datum and pitched `i_HT` nose-down, with a single named axis spanning the HT semi-span — the **Normal to Curve** reference §7.3.7 slices against. Changing `y_emp_axis`, `dihedral_HT` or `i_HT` re-solves the outline and the spar together, because they share a sketch and a datum chain.
+> **Success state:** one sketch holds the whole stabilizer, sitting `y_emp_axis` above the wing datum and pitched `i_HT` nose-down, with a single named axis spanning the HT semi-span — the spar §7.3.7's streamwise section planes cut across. Changing `y_emp_axis`, `dihedral_HT` or `i_HT` re-solves the outline and the spar together, because they share a sketch and a datum chain.
 
 
 </details>
@@ -1622,7 +1622,7 @@ This one sketch carries **everything about the wing**: the 3-D planform outline,
 1. **Main spar.** **Line** tool, tick **For construction**; click on the root chord line, drag outboard, click on the tip chord line. **Smart Dimension** the inboard endpoint's in-plane chordwise distance from the Origin `= "x_spar_root_inc"` (aft, $-Z$); dimension the outboard endpoint `= "x_spar_tip_swept_inc"` chordwise and `= "b_semi_proj"` spanwise, both from the Origin.
 2. **Rear spar.** Another **For construction** line, root to tip, behind the main spar. Inboard endpoint, in-plane chordwise from the Origin `= "x_rspar_root_inc"`; outboard endpoint, in-plane chordwise from the **tip LE** `= "x_rspar_tip_inc"`.
 3. **Wing joiner axis.** A **For construction** line starting on `AX_Long` ($X = 0$) and running outboard. **Smart Dimension** its in-plane chordwise distance from the Origin `= "x_joiner_root_inc"` (aft, $-Z$). Because `x_joiner_root` `= "x_spar_root"`, the joiner sits co-linear with the main spar at the root by construction.
-4. **Physical rib-root seed point.** Select the **Point** tool and click **on** the main spar line to drop a coincident point, then **Smart Dimension** from the spar line's **root endpoint** to this seed — both lie on the line, so this is a true along-spar length → `= "rib_root_off_physical"`. This is the Path 2 seed §7.3 uses.
+4. **Physical rib-root seed point.** Select the **Point** tool and click **on** the main spar line to drop a coincident point, then **Smart Dimension** from the spar line's **root endpoint** to this seed — both lie on the line, so this is a true along-spar length → `= "rib_root_off_physical"`. **Reference only.** This point used to seed the spar-normal rib planes; §7.3 now offsets them from the Right Plane instead, so nothing downstream consumes it. Keep it as a visual marker of where the innermost rib meets the spar — and as the one surviving consumer of `rib_root_off_physical`, which is otherwise a live orphan.
 
 </details>
 
@@ -1633,7 +1633,8 @@ This one sketch carries **everything about the wing**: the 3-D planform outline,
 2. Select that point, click **Linear Sketch Pattern**. Under **Direction 1** select the **main spar line** as the pattern axis. Enter placeholders (spacing `50`, instances `2`), tick **Dimension X spacing** and **Display instance count**, green-check.
 3. Double-click the on-screen spacing dimension → `= "rib_pitch_proj"`; double-click the instance count → `= "n_rib"`.
 4. Hold **`Ctrl`**, select the second patterned point and the main spar line, and add a **Coincident** so the array stays welded to the spar.
-> **What `rib_pitch_proj` does and does not correct.** The $1/\cos\Gamma$ factor removes the **dihedral** foreshortening. The pattern still advances *along the spar*, which also rakes in $Z$ with the LE sweep, so the spanwise projection retains the sweep factor exactly as it did on the flat Top Plane — this move changes nothing about that. If you need stations that are physically exact along the real 3-D spar, use §7.3 **Path 2 / Route A**, which is driven by `rib_root_off_physical` and is unaffected.
+> **What `rib_pitch_proj` does and does not correct.** The $1/\cos\Gamma$ factor removes the **dihedral** foreshortening. The pattern still advances *along the spar*, which also rakes in $Z$ with the LE sweep, so the spanwise projection retains the sweep factor exactly as it did on the flat Top Plane — this move changes nothing about that.
+> **These points no longer locate the rib planes.** §7.3 offsets `PLN_RibStn_R01` from the Right Plane and patterns it along $X$, so the planes sit at exact `rib_pitch` spacing regardless of what this array does. Keep the array: it is the visual span ruler, the pierce target for rib/spar intersection marks, and the only consumer of `rib_root_off_proj` and `rib_pitch_proj`. Do **not** re-point the planes at it.
 
 </details>
 
@@ -1700,56 +1701,53 @@ This one sketch carries **everything about the wing**: the 3-D planform outline,
 </details>
 
 <details>
-<summary><b>7.3 — Create the rib-station planes (true-normal to the 3D spar)</b></summary>
+<summary><b>7.3 — Create the rib-station planes (streamwise, parallel to the Right Plane)</b></summary>
 
-Rib planes must sit **perpendicular to the real spar**, which is tilted by **both** the plan-view sweep/taper slope and the front-view **dihedral**. Offsetting flat planes from the Right Plane (normal to X) is only a small-angle approximation; here each plane is sliced **normal to the true 3D axis** `AX_MainSpar_3D` (built in §7.2) **at a parametric station point from §5.5** — so location comes from the §5.5 array and orientation comes from the true spar.
+Rib planes sit **parallel to the Right Plane** — constant $X$, one plane per spanwise station — so every rib lies **along the flight direction**. On a swept wing this is the whole point: a plane sliced normal to the spar cuts the panel obliquely, and the resulting section is *not* the airfoil. Because `SURF_Wing_OML` is lofted between two constant-$X$ airfoil curves (§8.3), every constant-$X$ cut through it returns the exact `FX 74-Cl5-140` section at its true chord, at every station.
+
+> **⭐ Why streamwise, not spar-normal.** With `sweep_LE` at its present value the main spar runs $12.80°$ off the $X$ axis *(≈12.8026°)*, so a spar-normal plane stretches the cut chord by $1/\cos$ of that angle — about $2.6\%$, or $230.74$ mm against a true $225$ mm chord *(≈230.7363)*. That section is an ellipse-distorted airfoil that matches no published polar, and it is the section XFLR5 did **not** analyse. Streamwise planes return the profile the aerodynamics were actually computed for.
+>
+> | | Spar-normal (retired) | Streamwise (current) |
+> |---|---|---|
+> | Rib section | oblique cut, chord stretched $\approx 2.6\%$ | true `FX 74-Cl5-140` at its own chord |
+> | Rib shapes | every station slightly different | **all identical** at `taper` $= 1$ |
+> | Plane location | projected or along-spar, two competing metrics | one metric: spanwise $X$ |
+> | Pitch between planes | $\ne$ `rib_pitch` | exactly `rib_pitch` |
+> | Spar/rib joint | square | crossed at $12.80°$ — see the guard below |
+>
+> **Success state:** `PLN_RibStn_R01` renders as a rectangle **parallel to the Right Plane**, with no cant in $Y$ or $Z$. **Measure** it to the Right Plane and it reports a pure $X$ offset with $\Delta Y = \Delta Z = 0$.
+
+> **⚠ The one thing this costs you — the spar no longer meets the ribs square.** The main spar crosses each streamwise rib at $12.80°$ off the rib-plane normal, so a **round** spar tube pierces an **ellipse**, not a circle: major axis $= 1.0255 \times$ tube diameter *(≈1.0255)*, minor axis unchanged, major axis lying in $Z$. Cut the spar slots from the actual spar/OML intersection (§I-6a Phase 3), never from a nominal circle, or every rib will bind on assembly. This is the standard, accepted trade for streamwise ribs and it is why full-scale swept wings use angled rib/spar shear ties.
 
 <details>
-<summary><b>Phase 1: Base plane generation (<code>PLN_RibStn_R01</code>)</b></summary>
+<summary><b>Phase 1: Seed plane (<code>PLN_RibStn_R01</code>)</b></summary>
 
 1. Click **Insert ▸ Reference Geometry ▸ Plane**.
-2. **First Reference —** click `AX_MainSpar_3D`. SolidWorks defaults to a **Coincident/Parallel** guess (an invalid plane lying *through* the axis); open the constraint dropdown beside the selection box and change it to **Normal to Curve**. The preview flips to a small plane square to the axis.
-3. **Second Reference —** pick the seed that matches your propagation route (Phase 2). The two paths are mutually exclusive; choose by whether you want the wing pinned to exact **spanwise** stations or driven **100% physically** along the spar:
-   - **Path 1 — Projected / hybrid (feeds Route B).** Click the **first patterned seed point** on the main-spar line inside `LAY_Wing_Incidence` (§7.2 Phase B Step 5, at `= "rib_root_off_proj"`). SolidWorks projects that spanwise station perpendicularly onto the 3D axis and pins the plane there — tilted by the true sweep **and** dihedral. Location comes from the 2D array's **spanwise ($X$) station**, so this base stays exactly co-planar with the per-station points Route B selects downstream.
-   - **Path 2 — Pure physical (feeds Route A).** Click the **3D seed point created directly on the spar line** inside `LAY_Wing_Incidence` (§7.2 Phase B Step 4, dimensioned `= "rib_root_off_physical"`). The point already **lives on the axis**, so there is no projection step at all — its location is a true along-spar physical station. This is the base plane for a fully physical layout; pick it if you will propagate with Route A.
-4. Click the **Green Checkmark** ($\checkmark$) and rename the plane `PLN_RibStn_R01`.
-> **Why this works:** *Normal to Curve* always takes **orientation** from the 3D axis; the second reference supplies only **location**. Neither carries a hard number, so the plane's tilt re-solves with `dihedral`/`sweep_LE`/taper regardless of path, while its station re-solves with `rib_root_off` (**Path 1**, projected spanwise) or `rib_root_off_physical` (**Path 2**, along-spar) — no `->x`, no stale offset either way.
-> **Success state:** `PLN_RibStn_R01` renders as a small rectangle **canted in both Y and Z** (not parallel to the Right Plane). **Measure** it to the Right Plane and it reports a non-zero tilt equal to the compound spar angle.
+2. **First Reference —** click the default **Right Plane**. Open the constraint dropdown beside the selection box and set **Offset Distance** $(\rightarrow|)$.
+3. Delete any placeholder number in the distance box, type exactly `= "rib_root_off"`, and press **`Enter`**.
+4. Use the **Flip** toggle if needed so the preview lands to **port ($+X$)**, not starboard.
+5. Click the **Green Checkmark** ($\checkmark$) and rename the plane `PLN_RibStn_R01`.
+
+> **Why this is now a one-reference plane.** Orientation and location both come from the Right Plane and a single global. There is no second reference, no projection, and no along-spar metric — so the old **Path 1 (projected)** and **Path 2 (physical)** split has nothing left to disagree about and has been removed. `rib_root_off_physical` is retained in the equations file but is no longer consumed by any feature; it is a live orphan, kept so this section can be reverted to a spar-normal build without re-deriving it.
+
+</details>
 
 <details>
-<summary><b>Phase 2: Parametric propagation of the remaining stations</b></summary>
+<summary><b>Phase 2: Pattern the remaining stations (<code>LPTN_RibPlanes</code>)</b></summary>
 
-Two routes — pick per your PDM/naming needs.
-
-<details>
-<summary><b>Route A — Linear Pattern of Reference Geometry (auto-count)</b></summary>
-
-Built on the **Path 2** (pure-physical) base plane — this is what makes the whole set physical end to end.
 1. **Insert ▸ Pattern/Mirror ▸ Linear Pattern**.
-2. **Direction 1 —** click `AX_MainSpar_3D` so the copies march **along the true spar**, not along X.
-3. Spacing `= "rib_pitch"`; instances `= "n_rib"`.
-4. Open the **Features to Pattern ▸ Reference Geometry** box and pick `PLN_RibStn_R01`; green check. The set re-counts and re-spaces whenever `rib_pitch` or `n_rib` changes — flex-safe in both directions.
-5. **Rename the pattern feature.** Slow-double-click the newly created linear-pattern feature at the bottom of the tree (or press **F2**) and rename it exactly `LPTN_RibPlanes`. In SolidWorks the patterned reference planes live *inside* this single master pattern feature rather than as separate top-level planes, so suffix naming (`R02`, `R03`, …) is handled implicitly by the pattern instances — naming the parent feature cleanly is paramount.
-6. **File it immediately.** Drag both the seed plane (`PLN_RibStn_R01`) and the pattern feature (`LPTN_RibPlanes`) up the tree and drop them into the `3_RIB_PLANES` folder.
-> **Why Pure Route A is self-consistent:** the base plane is located by `rib_root_off_physical` — a true along-spar length (§7.2 Phase B Step 4) — **and** the pattern steps `rib_pitch` **along that same 3D axis**. Every station on the wing is therefore measured in one and the same **physical, along-spar metric**. There is no longer a projected-2D base feeding a 3D pattern, so the projected-vs-real mismatch that used to corrupt the **first bay** is gone: the inboard bay is now spaced by the exact same rule as every bay outboard of it. The layout is untangled from `LAY_Wing_Plan`'s flat points from the very first plane.
-> **Honest note — physical pitch ≠ spanwise pitch, by design:** `rib_pitch` is *defined* spanwise (§5.5), and Route A lays it **along** the tilted axis, so the absolute spanwise ($X$) stations sit slightly inboard of the flat §5.5 array by $1/(\cos\Gamma\,\cos\Lambda_{spar})$ (≈ 0.4 % at `dihedral = 4°`, `sweep_LE = 0`). Under Pure Route A this is a **uniform, intentional** physical spacing applied identically to every bay — not an interior inconsistency. If instead you need the ribs pinned to the exact spanwise §5.5 stations, take **Path 1 → Route B**, which is station-exact in $X$.
+2. **Direction 1 —** click the **Right Plane** in the flyout tree. SolidWorks patterns along its **normal**, i.e. straight out the span in $X$. Confirm the preview marches to port; if it marches to starboard, tick **Reverse Direction**.
+3. **Spacing —** click the spacing field, hit the **equals-arrow** (`=`) to open the equation dropdown, and enter `= "rib_pitch"`.
+4. **Number of Instances —** same dropdown, enter `= "n_rib"`.
+5. Open the **Features to Pattern ▸ Reference Geometry** box and pick `PLN_RibStn_R01`; green-check.
+6. **Rename the pattern feature.** Slow-double-click the new linear-pattern feature at the bottom of the tree (or press **F2**) and rename it exactly `LPTN_RibPlanes`. The patterned planes live *inside* this one feature, so the `R02`, `R03`, … suffixes are implicit in the instance numbering — naming the parent cleanly is what matters.
+7. **File it immediately.** Drag both `PLN_RibStn_R01` and `LPTN_RibPlanes` into the `3_RIB_PLANES` folder.
 
-</details>
+> **Station mapping — now exact.** Station $n$ sits at $X_n = rib\_root\_off + (n-1)\,rib\_pitch$, and because `rib_pitch` is *defined* spanwise as $(b\_semi - rib\_root\_off)/(n\_rib - 1)$, the outermost instance lands on $X = $ `b_semi` precisely, co-planar with `PLN_Tip`. The old "physical pitch $\ne$ spanwise pitch" caveat is gone: there is only one metric now, and the Measure between adjacent planes returns `rib_pitch` exactly, with $\Delta Y = \Delta Z = 0$.
+>
+> **Divider-rib check.** With `n_rib_div` $= 4$ the fourth instance must land on `y_rib_div` — the station §I-6a Phase 4 builds the thicker divider rib on, and the station all four control-surface `*_pct` globals derive from. If it does not, `rib_root_off`, `rib_pitch` or `n_rib_div` disagree; fix the globals, not the plane.
 
-<details>
-<summary><b>Route B — Manual per-station planes (station-exact, clean names)</b></summary>
-
-Built on the **Path 1** (projected) base plane, keeping the whole set on the 2D spanwise §5.5 stations. Best when each plane needs its own name for tidy **Insert Part** picks or PDM. For each station $n = 2 \ldots$ `n_rib`:
-1. **Insert ▸ Reference Geometry ▸ Plane**.
-2. **First Reference —** `AX_MainSpar_3D`, dropdown → **Normal to Curve**.
-3. **Second Reference —** the **$n$-th patterned point** of the §5.5 array (`Point{n}` of the Linear Sketch Pattern on the spar). The plane pins to that exact spanwise station.
-4. Green check; rename `PLN_RibStn_R{nn}` (`R02`, `R03`, …).
-5. **File it as you go.** Drag each new `PLN_RibStn_R{nn}` immediately into the `3_RIB_PLANES` folder to keep the workspace clear.
-> **Mapping.** Station $n$ lives at spanwise $x_n = rib\_root\_off + (n-1)\,rib\_pitch$ — the §5.5 point — and its plane is **Normal to Curve** on `AX_MainSpar_3D`, so every plane inherits the exact array **location** and the true compound **tilt**. Because each plane's location reference *is* a §5.5 pattern instance, editing `rib_pitch` or `n_rib` re-drives the point and the plane rides with it; there is no hard offset to go stale.
-> **Dangling-ref guard (Route B):** manual planes bind to specific instances `Point{n}`, so **reducing** `n_rib` deletes trailing instances and would leave those planes with a `->x` missing reference. If you flex `n_rib` **down**, delete the now-orphaned high-station planes first (or use Route A, which auto-counts). Flexing `n_rib` **up** simply leaves the new outboard points unplaned until you add planes — no breakage.
-
-</details>
-</details>
+> **Reference-only points.** The rib seed point and its linear array inside `LAY_Wing_Incidence` (§7.2 Phase B Steps 4–5, at `= "rib_root_off_proj"` / `= "rib_pitch_proj"`) no longer locate these planes. Keep them: they remain the visual span ruler and the pierce targets for rib/spar intersection marks, and they keep both `_proj` globals live. Do **not** re-point the planes at them.
 
 </details>
 
@@ -1855,23 +1853,22 @@ The fuselage OML (§8.5) is built on its *own* set of longitudinal planes, offse
 </details>
 
 <details>
-<summary><b>7.3.7 — Horizontal-tail section planes (Normal-to-Curve on <code>AX_HTspar_3D</code>)</b></summary>
+<summary><b>7.3.7 — Horizontal-tail section planes (streamwise, parallel to the Right Plane)</b></summary>
 
-Like the wing rib planes (§7.3), HT section planes sit **normal to the true tail-spar axis** and are bounded by the HT semi-span $X = $ `b_HT`$/2$. Build them in a dedicated tail-plane folder so the empennage stays decoupled from both the wing rib grid and the fuselage stations.
+Like the wing rib planes (§7.3), HT section planes sit **parallel to the Right Plane** — constant $X$ — so the stabilizer's ribs lie along the flight direction and each cut returns the true `NACA 0012` section. Build them in a dedicated tail-plane folder so the empennage stays decoupled from both the wing rib grid and the fuselage stations.
 * **Root section plane (`PLN_HT_Root`).**
   1. **Insert ▸ Reference Geometry ▸ Plane**.
-  2. **First Reference —** click `AX_HTspar_3D`; open the constraint dropdown and set **Normal to Curve** (SolidWorks' first guess lies *through* the axis — override it).
-  3. **Second Reference —** click the **HT root-spar point** (inboard end of the §5.8.1 line, at the centerline $X = 0$). The plane pins there, square to the spar.
-  4. Green-check; rename `PLN_HT_Root`.
-* **Tip section plane (`PLN_HT_Tip`).** Repeat with the **HT tip-spar point** (outboard end, at $X = $ `b_HT`$/2$) as the second reference. Rename `PLN_HT_Tip`.
+  2. **First Reference —** click the default **Right Plane**; open the constraint dropdown and set **Coincident**. The stabilizer root section is the centerline section, so this plane is coplanar with the Right Plane by definition — it exists as a *named* datum for downstream **Insert Part** picks, nothing more.
+  3. Green-check; rename `PLN_HT_Root`.
+* **Tip section plane (`PLN_HT_Tip`).** Repeat with **First Reference** = **Right Plane**, constraint **Offset Distance** $(\rightarrow|)$, and type `= "b_semi_HT"`. **Flip** if needed so it previews to port ($+X$). Rename `PLN_HT_Tip`.
 * **Optional intermediate rib planes (`LPTN_RibPlanes_HT`).** For a multi-rib stabilizer, seed a **Linear Pattern** (**Insert ▸ Pattern/Mirror ▸ Linear Pattern**):
   1. **Features to Pattern —** click `PLN_HT_Root`.
-  2. **Direction 1 —** click `AX_HTspar_3D` (copies step outboard along the true tail-spar axis).
+  2. **Direction 1 —** click the **Right Plane**; the copies step along its normal, straight out the stabilizer span in $X$. Tick **Reverse Direction** if the preview marches starboard.
   3. **Spacing —** click the spacing field, hit the **equals-arrow** (`=`) to open the equation dropdown, and enter `= "rib_pitch_HT"`.
   4. **Number of Instances —** same equation dropdown, enter `= "n_rib_HT"`.
-  5. Preview and confirm the outermost plane lands **at or inside** $X = $ `b_HT`$/2$ (co-planar with `PLN_HT_Tip`). Green-check; press **F2** and rename the feature `LPTN_RibPlanes_HT` — parity with the wing's `LPTN_RibPlanes`.
-  > **Pattern globals — `rib_pitch_HT` × `n_rib_HT`.** Both **Spacing** and **Number of Instances** link to globals (`= "rib_pitch_HT"`, `= "n_rib_HT"`), exactly as the wing's `LPTN_RibPlanes` rides `rib_pitch` × `n_rib`. `rib_pitch_HT` is **derived** (`b_semi_HT / (n_rib_HT − 1)`), so the outermost plane tracks `PLN_HT_Tip` automatically as the tail resizes; `n_rib_HT` is a starter (4) — set it to your stabilizer rib count. Both drive pattern-feature parameters, not sketch dimensions, so linking them keeps the tail rib grid flex-safe without touching the parametric-dimension rule.
-  > **Currently flat, by design.** With `sweep_HT` = 0 and no HT dihedral, these planes come in normal-to-$X$ (flat) — correct for the present geometry. They auto-tilt the moment `AX_HTspar_3D` gains sweep or dihedral (§5.8.2), because **Normal to Curve** always takes orientation from the live axis.
+  5. Preview and confirm the outermost plane lands **at or inside** `PLN_HT_Tip`. Green-check; press **F2** and rename the feature `LPTN_RibPlanes_HT` — parity with the wing's `LPTN_RibPlanes`.
+  > **Pattern globals — `rib_pitch_HT` × `n_rib_HT`.** Both **Spacing** and **Number of Instances** link to globals (`= "rib_pitch_HT"`, `= "n_rib_HT"`), exactly as the wing's `LPTN_RibPlanes` rides `rib_pitch` × `n_rib`. `rib_pitch_HT` is **derived** (`b_semi_HT / (n_rib_HT − 1)`), so the outermost plane lands **exactly on** `PLN_HT_Tip` and tracks it automatically as the tail resizes; `n_rib_HT` is a starter (4) — set it to your stabilizer rib count. Both drive pattern-feature parameters, not sketch dimensions, so linking them keeps the tail rib grid flex-safe without touching the parametric-dimension rule.
+  > **Why this is a no-op today, and why it still matters.** With `sweep_HT` = 0 and `dihedral_HT` = 0 the tail spar already runs along $X$, so the retired **Normal-to-Curve** build produced these same constant-$X$ planes. The difference is what happens *next*: if the stabilizer ever gains sweep, a spar-normal plane would silently start cutting oblique sections, exactly the failure §7.3 removed from the wing. Hosting on the Right Plane makes the streamwise intent explicit and sweep-proof.
 * **File the planes.** **`Ctrl`**-select `PLN_HT_Root` / `PLN_HT_Tip` (and any pattern), **right-click ▸ Add to New Folder** named `3C_TAIL_PLANES`, and drag it below `3B_FUSELAGE_PLANES` so wing / fuselage / tail read as three parallel, decoupled subsystems.
 
 </details>
@@ -1879,33 +1876,25 @@ Like the wing rib planes (§7.3), HT section planes sit **normal to the true tai
 <details>
 <summary><b>7.3.8 — Vertical-tail section planes (the vertical-axis coordinate shift)</b></summary>
 
-The fin is the coordinate-shift case: its **span runs up $+Y$**, so its section planes are **horizontal** (parallel to the Top Plane), stacked in $+Y$ and bounded by the fin height `= "b_VT"` — *not* lateral offsets like the wing/HT. Two builds; pick per how square you need the airfoils to the swept spar.
+The fin is the coordinate-shift case: its **span runs up $+Y$**, so its section planes are **horizontal** (parallel to the Top Plane), stacked in $+Y$ and bounded by the fin height `= "b_VT"` — *not* lateral offsets like the wing/HT. Horizontal *is* the streamwise orientation for a fin, so this is the same rule §7.3 applies to the wing, rotated $90°$: sections lie along the flight direction, and each cut returns the true `NACA 0012` profile. The former **Method 2** (Normal-to-Curve on `AX_VTspar_3D`) has been retired — it raked the sections off horizontal by `sweep_VT` and returned an oblique, chord-stretched cut, the same defect removed from the wing.
 
 <details>
-<summary><b>Method 1 — horizontal offsets from the Top Plane (simple; sections square to +Y)</b></summary>
+<summary><b>The build — horizontal offsets from the Top Plane</b></summary>
 
 1. **Insert ▸ Reference Geometry ▸ Plane**, **First Reference** = **Top Plane**, **Offset Distance** `= "h_tail_top"`, and **Flip** so it previews **up** ($+Y$) onto the crown seat. Green-check; rename `PLN_VT_Root`.
 2. Repeat with **Offset Distance** `= "h_VT_tip"` for the fin top. Rename `PLN_VT_Tip`.
    > Sections built on these horizontal planes stay horizontal; the chord still rakes aft between them because the *airfoil $Z$-station* rides `sweep_VT` in the §8.6 transform. This is the standard fin build and it matches how the Excel streams place the root and tip sections.
-
-<details>
-<summary><b>Method 2 — Normal-to-Curve on <code>AX_VTspar_3D</code> (rigorous; sections square to the raked spar)</b></summary>
-
-1. **Insert ▸ Reference Geometry ▸ Plane**, **First Reference** = `AX_VTspar_3D` → **Normal to Curve**, **Second Reference** = the fin-spar **root** endpoint. Rename `PLN_VT_Root`.
-2. Repeat at the fin-spar **tip** endpoint → `PLN_VT_Tip`.
-   > These tilt slightly off-horizontal by the `sweep_VT` rake, giving airfoils truly perpendicular to the swept spar. Use them only if fin-rib fabrication needs square-to-spar sections; otherwise Method 1 is cleaner.
 * **Optional intermediate fin planes (`LPTN_RibPlanes_VT`).** For a multi-rib fin, seed a **Linear Pattern** (**Insert ▸ Pattern/Mirror ▸ Linear Pattern**) of the root plane — the fin's vertical analog of the wing / HT rib pattern:
   1. **Features to Pattern —** click `PLN_VT_Root`.
-  2. **Direction 1 —** *Method 1 build:* click the **Top Plane** — the pattern steps along its normal, straight up $+Y$, keeping every copy horizontal. *Method 2 build:* click `AX_VTspar_3D` — the copies step along the raked spar and stay **Normal to Curve**.
+  2. **Direction 1 —** click the **Top Plane**; the pattern steps along its normal, straight up $+Y$, keeping every copy horizontal.
   3. **Spacing —** click the spacing field, hit the **equals-arrow** (`=`) to open the equation dropdown, and enter `= "rib_pitch_VT"`.
   4. **Number of Instances —** same dropdown, enter `= "n_rib_VT"`.
-  5. Preview and confirm the stack climbs in $+Y$ and the outermost copy lands **at or inside** `PLN_VT_Tip` (at $Y = $ `h_tail_top` $+$ `b_VT`). *Method 1 lands the top instance exactly on the tip; Method 2 stops just short of it by the `sweep_VT` rake — both satisfy "at or inside."* Green-check; press **F2** and rename the feature `LPTN_RibPlanes_VT`.
-  > **Pattern globals — `rib_pitch_VT` × `n_rib_VT`.** Both fields link to globals, mirroring the wing's `LPTN_RibPlanes` (`rib_pitch` × `n_rib`) and the HT's `LPTN_RibPlanes_HT`. `rib_pitch_VT` is **derived** (`b_VT / (n_rib_VT − 1)`), so the top instance tracks `PLN_VT_Tip` automatically as the fin resizes; `n_rib_VT` is a starter (4) — set it to your fin-rib count. Both drive pattern-feature parameters, not sketch dimensions, so they respect the parametric-dimension rule.
-  > **Vertical-axis guard (pattern).** Because the seed is a horizontal plane (Method 1) or a raked-spar plane (Method 2), verify the copies advance in **$+Y$**, not $X$ — the same fin-vs-wing check as the single planes below. If the stack marches in $X$, Direction 1 is pointing at a lateral edge; reselect the Top Plane or `AX_VTspar_3D`.
+  5. Preview and confirm the stack climbs in $+Y$ and the outermost copy lands **at or inside** `PLN_VT_Tip`. Green-check; press **F2** and rename the feature `LPTN_RibPlanes_VT`.
+  > **Pattern globals — `rib_pitch_VT` × `n_rib_VT`.** Both fields link to globals, mirroring the wing's `LPTN_RibPlanes` (`rib_pitch` × `n_rib`) and the HT's `LPTN_RibPlanes_HT`. `rib_pitch_VT` is **derived** (`b_VT / (n_rib_VT − 1)`); `n_rib_VT` is a starter (4) — set it to your fin-rib count. Both drive pattern-feature parameters, not sketch dimensions, so they respect the parametric-dimension rule.
+  > **⚠ Open discrepancy — the top instance currently overshoots `PLN_VT_Tip`.** The seed sits at `h_tail_top` (the fuselage crown seat) but `rib_pitch_VT` is derived from `b_VT`, which is measured from the fin root on `AX_Long_Emp` at `y_emp_axis`. The stack therefore terminates at `h_tail_top` $+$ `b_VT` while `PLN_VT_Tip` sits at `h_VT_tip` $=$ `y_emp_axis` $+$ `b_VT` — an overshoot of exactly `h_tail_top` $-$ `y_emp_axis` *(≈10.7892 mm)*, so step 5's "at or inside" check **fails as written**. Two clean resolutions, both requiring a decision that has not been taken: seed the pattern on `PLN_Emp_Datum` (fin root, $Y = $ `y_emp_axis`) so the metric matches `b_VT`; or redefine `rib_pitch_VT` over the exposed fin height (`h_VT_tip` $-$ `h_tail_top`) and keep the crown seat as the seed. Do not paper over it by editing the instance count.
+  > **Vertical-axis guard (pattern).** The seed is a horizontal plane, so verify the copies advance in **$+Y$**, not $X$ — the same fin-vs-wing check as the single planes below. If the stack marches in $X$, Direction 1 is pointing at a lateral edge; reselect the Top Plane.
 * **File the planes** into `3C_TAIL_PLANES` alongside the HT planes (the `LPTN_RibPlanes_VT` instances land there too).
-  > **Vertical-axis guard.** Whichever method you use, **Measure** `PLN_VT_Root` → `PLN_VT_Tip` and confirm the gap resolves in **$Y$** (= `b_VT`), not $X$. A gap reading in $X$ means you built the fin like a wing — the classic vertical-axis error (§14).
-
-</details>
+  > **Vertical-axis guard.** **Measure** `PLN_VT_Root` → `PLN_VT_Tip` and confirm the gap resolves in **$Y$**, not $X$. A gap reading in $X$ means you built the fin like a wing — the classic vertical-axis error (§14).
 
 </details>
 
@@ -1963,7 +1952,7 @@ These give downstream parts clean origins to mate to and a consistent frame for 
 <details>
 <summary><b>7.5 — Group and name</b></summary>
 
-Ensure your base rib plane (`PLN_RibStn_R01`) and its pattern engine (`LPTN_RibPlanes` for Route A) or individual planes (`PLN_RibStn_R02`+ for Route B) reside completely inside the `3_RIB_PLANES` folder. Confirm every other newly created reference entity carries its correct prefix name into its respective folder (`4_AXES`, `5_POINTS`, `6_CSYS`), leaving no default SolidWorks names (e.g. `Plane3`, `Axis1`) behind.
+Ensure your base rib plane (`PLN_RibStn_R01`) and its pattern engine (`LPTN_RibPlanes`) reside completely inside the `3_RIB_PLANES` folder. Confirm every other newly created reference entity carries its correct prefix name into its respective folder (`4_AXES`, `5_POINTS`, `6_CSYS`), leaving no default SolidWorks names (e.g. `Plane3`, `Axis1`) behind.
 
 </details>
 
@@ -3431,8 +3420,8 @@ Fill / belly / steering clearance validation is an installation concern → **In
 <details>
 <summary><b>13.4 — Convention check</b></summary>
 
-Open `LAY_Front_View` ▸ **Normal To** — confirm it's the span×height view (front view on the **Front Plane**). Confirm mirrored features mirror across the **Right Plane** (X = 0). Use **Tools ▸ Evaluate ▸ Measure** from a station point to the Origin and confirm it reports a **Z** distance. Triad reads **X-port / Y-up / Z-forward** (starboard = −X). **Rib-plane true-pitch check:** **Measure** the normal distance between two adjacent rib planes (`PLN_RibStn_R01` → `PLN_RibStn_R02`) — it must report the **true along-spar pitch** $= rib\_pitch/(\cos\Gamma\,\cos\Lambda_{spar})$, i.e. slightly **greater** than the flat `rib_pitch`, and the Measure X/Y/Z breakdown must show a **non-zero $\Delta Y$** from dihedral. A reading of exactly the flat `rib_pitch` with $\Delta Y = 0$ means the planes are still flat normal-to-X and must be rebuilt **Normal to Curve** on `AX_MainSpar_3D` (§7.3).
-- *Fix:* re-mirror across the Right Plane; re-apply stations along Z (§2 crosswalk); rebuild any flat rib planes as **Normal to Curve** on `AX_MainSpar_3D` (§7.3).
+Open `LAY_Front_View` ▸ **Normal To** — confirm it's the span×height view (front view on the **Front Plane**). Confirm mirrored features mirror across the **Right Plane** (X = 0). Use **Tools ▸ Evaluate ▸ Measure** from a station point to the Origin and confirm it reports a **Z** distance. Triad reads **X-port / Y-up / Z-forward** (starboard = −X). **Rib-plane streamwise check:** **Measure** the normal distance between two adjacent rib planes (`PLN_RibStn_R01` → `PLN_RibStn_R02`) — it must report exactly `rib_pitch`, and the Measure X/Y/Z breakdown must show a **pure $X$ separation** with $\Delta Y = \Delta Z = 0$. A reading *greater* than `rib_pitch`, or any non-zero $\Delta Y$, means the planes are still hung off `AX_MainSpar_3D` as **Normal to Curve** and must be rebuilt as Right-Plane offsets (§7.3) — they are cutting oblique sections, not the airfoil.
+- *Fix:* re-mirror across the Right Plane; re-apply stations along Z (§2 crosswalk); rebuild any spar-normal rib planes as **Offset Distance** from the **Right Plane** (§7.3).
 
 </details>
 
@@ -3576,10 +3565,10 @@ Each is framed as **Detect → Fix → Prevent** so it's actionable when you hit
 - *Fix:* move `x_arm_plug`/`x_switch` aft until the clearances are ≥ 0, or mount them radially outboard of the prop disk.
 - *Prevent:* bake `arm_clear`/`sw_clear` into the checks early; place both well aft on top.
 
-**12. Flat (normal-to-X) rib planes on a dihedral/swept wing.** Offsetting rib planes from the Right Plane ignores the true spar tilt, so ribs come in skewed to the real spar.
-- *Detect:* **Measure** between adjacent `PLN_RibStn_*` planes returns exactly the flat `rib_pitch` with a **zero $\Delta Y$**; ribs derived on the planes don't sit square to the spar and leave wedge gaps under the skin.
-- *Fix:* rebuild the planes **Normal to Curve** on the true 3D axis `AX_MainSpar_3D` at each §5.5 station point (§7.3); re-confirm the §13.4 true-pitch measurement.
-- *Prevent:* always host rib planes on `AX_MainSpar_3D`, never a flat Right-Plane offset; keep the true-pitch check in the §13 sign-off. Build `AX_MainSpar_3D` before the planes (§7.2).
+**12. Spar-normal rib planes on a swept wing.** Hanging the rib planes off `AX_MainSpar_3D` as **Normal to Curve** slices the panel obliquely, so every rib section is a chord-stretched distortion of the airfoil rather than the airfoil itself — and no two stations come out the same shape.
+- *Detect:* **Measure** between adjacent `PLN_RibStn_*` planes returns **more** than `rib_pitch`, or the X/Y/Z breakdown shows a non-zero $\Delta Y$; a rib profile sketched on the plane measures a chord longer than `c_root` at that station; the seven rib outlines are all subtly different despite `taper` $= 1$.
+- *Fix:* rebuild `PLN_RibStn_R01` as **Offset Distance** `= "rib_root_off"` from the **Right Plane**, and re-point `LPTN_RibPlanes` Direction 1 at the Right Plane (§7.3); re-confirm the §13.4 streamwise measurement.
+- *Prevent:* always host rib planes on the **Right Plane**, never on `AX_MainSpar_3D`; keep the streamwise check in the §13 sign-off. Accept that the spar then crosses each rib off-normal — cut spar slots from the real spar/OML intersection, not a nominal circle (§7.3, §I-6a Phase 3).
 
 **13. Hard-pinning the thrust line to the wing-root waterline.** A Coincident/Collinear relation locking the prop/thrust center to the $Y = 0$ waterline freezes the motor at the wing-root height, so `y_motor_offset` can't move it — and if the Ground Line still hangs off the Origin, `prop_clear` silently breaks when the motor is meant to drop.
 - *Detect:* editing `y_motor_offset` does nothing, or throws an over-defined **(+)** prefix, or the disk snaps back to the wing datum; **Display/Delete Relations** on the center point shows a **Coincident** to the waterline sitting alongside the `y_motor_offset` dimension.

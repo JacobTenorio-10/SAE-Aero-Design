@@ -296,7 +296,7 @@ Each rib is the wing's own section at that station, so the profile is taken **fr
 7. Repeat steps 1–6 on `PLN_Rib_2` through `PLN_Rib_7`, naming each `SK_Rib_N_Profile`.
 
 > **This is the step that makes the ribs airfoil-shaped and keeps them that way.** The profiles are *linked* to `SURF_Wing_OML`. Re-export the airfoil curve files, rebuild, and all seven ribs change section together. A traced or offset outline would not.
-> **Success state:** seven closed profiles, each black, each sitting on its own rib plane, each visibly narrower than the last as the section moves outboard.
+> **Success state:** seven closed profiles, each black, each sitting on its own rib plane. Because `taper` $= 1$ and the rib planes are streamwise (§7.3), all seven are the **same shape and the same chord** — they differ only in their $Y$ and $Z$ position as the panel climbs with `dihedral` and rakes aft with `sweep_LE`. If a profile comes out wider than its neighbours, its plane is not parallel to the Right Plane.
 
 </details>
 
