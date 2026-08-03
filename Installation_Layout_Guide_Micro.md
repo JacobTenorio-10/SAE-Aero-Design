@@ -272,7 +272,7 @@ The skeleton already publishes everything these parts consume: the seven rib pla
 <details>
 <summary><b>Phase 1 — derive the skeleton into the rib part</b></summary>
 
-1. **File ▸ New ▸ Part ▸ OK.** **File ▸ Save As** → `Z:\SAE_Micro_2026\03_CAD\WING_RIBS_PORT.SLDPRT`.
+1. **File ▸ New ▸ Part ▸ OK.** **File ▸ Save As** → `Z:\SAE_Micro_2026\02_Parts\WING_RIBS_PORT.SLDPRT`.
 2. **Insert ▸ Part…**, select `SKELETON.SLDPRT`, click **Open**.
 3. In the PropertyManager, **untick** *Locate part with Move/Copy Feature*. Under **Transfer**, tick **Planes**, **Axes** and **Surface bodies**; leave **Solid bodies** unticked — the skeleton has none.
 4. Click the **Green Checkmark**. The tree gains the seven `PLN_Rib_*` planes, the `AX_*` axes and `SURF_Wing_OML`.
