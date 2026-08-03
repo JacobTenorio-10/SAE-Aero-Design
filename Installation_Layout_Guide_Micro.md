@@ -34,7 +34,7 @@ Map each servo as a body-free **keep-out box** ahead of its hinge, then confirm 
 <details>
 <summary><b>Step 1 — locate the servo station</b></summary>
 
-The aileron servo seats mid-aileron; its spanwise centre is `= "y_servo_ail"` — one global, per the one-variable rule. Build a local section plane there: **Insert ▸ Reference Geometry ▸ Plane**, First Reference = `AX_MainSpar_3D` → **Normal to Curve**, Second Reference = a point on the spar at that spanwise expression; green-check and rename `PLN_Servo_Ail`. *(Or skip the plane and sketch the plan footprint straight on `LAY_Wing_Plan`.)*
+The aileron servo seats mid-aileron; its spanwise centre is `= "y_servo_ail"` — one global, per the one-variable rule. Build a local section plane there: **Insert ▸ Reference Geometry ▸ Plane**, First Reference = the default **Right Plane** → **Offset Distance** $(\rightarrow|)$ `= "y_servo_ail"`, flipped to port ($+X$); green-check and rename `PLN_Servo_Ail`. Streamwise, matching the rib planes it sits between (SKELETON §7.3) — a spar-normal plane here would cut the servo bay obliquely and misreport the pocket depth. *(Or skip the plane and sketch the plan footprint straight on `LAY_Wing_Plan`.)*
 
 <details>
 <summary><b>Step 2 — the plan footprint (<code>LAY_Servo_Bay_Ail</code>), driven by the servo globals</b></summary>
@@ -275,7 +275,7 @@ The skeleton already publishes everything these parts consume: the seven rib pla
 1. **File ▸ New ▸ Part ▸ OK.** **File ▸ Save As** → `Z:\SAE_Micro_2026\02_Parts\WING_RIBS_PORT.SLDPRT`.
 2. **Insert ▸ Part…**, select `AIRCRAFT_SKELETON_SAE_MICRO26.SLDPRT`, click **Open**.
 3. In the PropertyManager, **untick** *Locate part with Move/Copy Feature*. Under **Transfer**, tick **Planes**, **Axes** and **Surface bodies**; leave **Solid bodies** unticked — the skeleton has none.
-4. Click the **Green Checkmark**. The tree gains the seven `PLN_Rib_*` planes, the `AX_*` axes and `SURF_Wing_OML`.
+4. Click the **Green Checkmark**. The tree gains the seven `PLN_RibStn_R*` planes, the `AX_*` axes and `SURF_Wing_OML`.
 5. Press **`Ctrl + Q`**. Confirm zero errors and that **Tools ▸ Evaluate ▸ Mass Properties** still reads **0.00 g** — nothing solid exists yet.
 
 > **Why derive rather than reference externally.** An Insert-Part derive gives one external reference to one file. Mating to the skeleton in the assembly instead would scatter references across every rib and break the moment a plane is renamed.
@@ -287,13 +287,13 @@ The skeleton already publishes everything these parts consume: the seven rib pla
 
 Each rib is the wing's own section at that station, so the profile is taken **from the OML surface**, never redrawn.
 
-1. Expand `3_RIB_PLANES`. Right-click `PLN_Rib_1` ▸ **Sketch**.
+1. Expand `3_RIB_PLANES`. Right-click `PLN_RibStn_R01` ▸ **Sketch**.
 2. Press **`Ctrl + 8`** to look normal to the plane.
 3. Click **Tools ▸ Sketch Tools ▸ Intersection Curve**. With the sketch open, click `SURF_Wing_OML` in the tree.
 4. Green-check. A closed airfoil outline appears on the plane — the exact section, upper and lower surface, trailing edge closed.
 5. Confirm the outline is **black**. It is fully defined by construction, because it is the intersection of two pieces of existing geometry; it takes no dimensions and must take none.
 6. **Exit** the sketch, press **F2**, rename `SK_Rib_1_Profile`.
-7. Repeat steps 1–6 on `PLN_Rib_2` through `PLN_Rib_7`, naming each `SK_Rib_N_Profile`.
+7. Repeat steps 1–6 on `PLN_RibStn_R02` through `PLN_RibStn_R07`, naming each `SK_Rib_N_Profile`. These are pattern instances inside `LPTN_RibPlanes`, so expand that feature in the tree to select them individually.
 
 > **This is the step that makes the ribs airfoil-shaped and keeps them that way.** The profiles are *linked* to `SURF_Wing_OML`. Re-export the airfoil curve files, rebuild, and all seven ribs change section together. A traced or offset outline would not.
 > **Success state:** seven closed profiles, each black, each sitting on its own rib plane. Because `taper` $= 1$ and the rib planes are streamwise (§7.3), all seven are the **same shape and the same chord** — they differ only in their $Y$ and $Z$ position as the panel climbs with `dihedral` and rakes aft with `sweep_LE`. If a profile comes out wider than its neighbours, its plane is not parallel to the Right Plane.
