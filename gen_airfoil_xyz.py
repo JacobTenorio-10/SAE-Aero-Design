@@ -34,6 +34,16 @@ port is +X, origin at the wing-root leading edge.
 The trailing edge is CLOSED: the raw file's two TE points carry y = +0.00009
 and y = -0.00003, and the spreadsheet overrides both to y = 0 so the upper and
 lower curves share one endpoint. This script does the same.
+
+The leading edge is CLOSED the same way: the raw file's LE point carries
+y = -0.00021, so the section's foremost point does not lie on its own chord
+line. Left alone, that puts the OML leading edge 0.00021 * c = 0.047250 mm
+below the wing-root Origin and 0.047250 mm below the tip station point of
+LAY_Wing_Incidence - a uniform out-of-plane offset that defeats the SKELETON
+section 8.4 nose-vertex checks and blocks any Coincident/Pierce relation
+between the sketch outline and the loft. Overriding it to y = 0 lands the LE
+vertex exactly on the sketch. The shift is 0.021 percent of chord, inside the
+digitisation noise of the source coordinates.
 """
 
 import argparse
@@ -66,7 +76,7 @@ def read_globals(path):
 
 
 def read_airfoil(path):
-    """Normalised (x, y) pairs, trailing edge closed to y = 0 at both ends."""
+    """Normalised (x, y) pairs, leading and trailing edges closed to y = 0."""
     pts = []
     for line in open(path, encoding="utf-8"):
         t = line.split()
@@ -81,6 +91,7 @@ def read_airfoil(path):
     pts[0][1] = 0.0                       # close the trailing edge
     pts[-1][1] = 0.0
     le = min(range(len(pts)), key=lambda k: pts[k][0])
+    pts[le][1] = 0.0                      # close the leading edge onto the chord line
     return pts, le
 
 
