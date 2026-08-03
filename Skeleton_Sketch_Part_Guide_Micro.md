@@ -172,7 +172,7 @@ Before opening SolidWorks, run these quick checks to ensure the backbone path is
 3. **Tools ▸ Equations** → in the **Equations, Global Variables, and Dimensions** dialog set **Angular equation units** = **Radians**. This is a per-document setting, SolidWorks defaults it to **Degrees**, and it must be changed *before* the equation set is imported.
    > **Why:** every trig call in `skeleton_equations_micro.txt` converts its own argument — `x_LE_tip` `= "b_semi" * tan("sweep_LE" * pi/180)`. Left on **Degrees** SolidWorks converts a second time, so the tangent is taken of a small fraction of a degree and every swept station collapses toward zero. 33 globals contain trig and 39 evaluate wrongly, several by more than a root chord. Nothing errors out — the model simply rebuilds to the wrong shape.
    > **This is not the angular unit from the previous step.** That one sets the *display* unit for angular dimensions, which stays **degrees**: `PLN_Dihedral` is still driven by `= "dihedral"` and reads four degrees on screen. This drop-down governs only the argument units of `sin`, `cos` and `tan` inside equations.
-   > **Success state:** with the equation set loaded, the **Value** column reads *(≈100.8767)* mm for `x_LE_tip_inc`. A reading of *(≈1.74)* mm means the drop-down is still on **Degrees**.
+   > **Success state:** with the equation set loaded, the **Value** column reads *(≈112.0000)* mm for `x_LE_tip_inc` — the XFLR5 Section 2 leading-edge offset. A reading of *(≈1.93)* mm means the drop-down is still on **Degrees**.
 4. **File ▸ Save As**, set "Save as type" = **Part Templates (\*.prtdot)**. Browse to `Z:\SAE_Micro_2026\00_Templates\`, and save the file as **`SAE_Micro_Part.prtdot`**.
 5. **Map the path locally (Every team member must do this):**
    - Go to **Tools ▸ Options ▸ System Options ▸ File Locations**.
@@ -467,7 +467,7 @@ No row should be red. Tick **Automatically rebuild**, click **OK**, then **Ctrl-
 <details>
 <summary><b>3.5 — Sanity-check against a hand calc</b></summary>
 
-With the current inputs (`b=1150`, `c_root=225`, `c_tip=225`, `V_H=0.98`, `l_HT=780`, `AR_HT=2.35`, `V_V=0.073`, `l_VT=780`, `AR_VT=1.54`), the dialog should read approximately:
+With the current inputs (`b=1150`, `c_root=225`, `c_tip=225`, `c_root_HT=170`, `b_HT=400`, `x_tail_LE_root=750`, `c_root_VT=170`, `c_tip_VT=90`, `b_VT=200`, `AR_VT=1.54`), the dialog should read approximately:
 
 > **These numbers are deliberately restated — this is the one place that is correct.** Everywhere else in this guide, cite the global and let it carry the value. A cross-check table has to hold an *independent* copy or it checks nothing. Regenerate it by hand whenever a wing or tail input changes; `values_audit.py` will list it, and this section is the expected exception.
 
@@ -556,7 +556,6 @@ Confirm **Automatically rebuild** is on, the `Equations` folder shows near the t
 | `bat_L` / `bat_W` / `bat_H` | 78.74 / 34.29 / 34.29 | 3.10 × 1.35 × 1.35 in 4S LiPo |
 | `avi_bat_L` / `avi_bat_W` / `avi_bat_H` | 60.96 / 30.48 / 22.86 | 2.40 × 1.20 × 0.90 in avionics pack |
 | `cabin_len` | 254 | 10 in constant-section cabin |
-| `tail_exit_D` | 19.05 | 0.75 in tail-cone exit bounding dia. |
 
 > **These seven globals were added to `skeleton_equations_micro.txt` this revision (136 → 143), and Appendix A of the parameter reference was updated byte-identically to match — the two stay in lock-step.** The motor mounts on the firewall firing forward into the 152.40 mm nose cone; `motor_L` (50.80) leaves ample spinner room. `tail_exit_D` drives the tail-cap closure in §4.4, §5.3.5, and §8.5.
 
@@ -701,11 +700,11 @@ The cabin keels span firewall → cabin-rear at a constant height. Do **not** pl
 
 The nose face and the sleeve end face are **finite vertical faces**, not points — a zero-height apex would collapse the §8.5 end-cap loft.
 1. Nose flat (`NT`–`NB`): **Smart Dimension** `NT` to the waterline → `= "h_nose_top"`, and `NB` to the waterline → `= "h_nose_bottom"`. These are **absolute-millimeter** globals (17.50 / 37.50 mm) — one exact height each, no fractional split.
-2. Sleeve root (`TT`–`TB`) — **tail-cone termination.** The tail station does **not** inherit the cabin's top/belly bias; it pinches to the `tail_exit_D` = 0.75-in bounding closure. **Smart Dimension** `TT` to the waterline → `= "h_tail_top"`, and `TB` to the waterline → `= "h_tail_bottom"`. Both are **positive magnitudes above** the waterline. The station closes symmetric about the waterline at a $19.05$ mm bounding height, matching the $19.05$ mm planform width (§5.3.5).
+2. Sleeve root (`TT`–`TB`) — **tail-cone termination.** The tail station does **not** inherit the cabin's top/belly bias; it pinches to the 1-in square sleeve bounding closure. **Smart Dimension** `TT` to the waterline → `= "h_tail_top"`, and `TB` to the waterline → `= "h_tail_bottom"`. Both are **positive magnitudes above** the waterline. The station closes symmetric about the waterline at a $19.05$ mm bounding height, matching the $19.05$ mm planform width (§5.3.5).
 3. Sleeve end (`SL_T`–`SL_B`) — **the new aft end of the fuselage.** Confirm the **Horizontal** relation on `TT → SL_T` and on `SL_B → TB`; the two sleeve walls must run dead-flat so the sleeve is a constant-section box the boom can slide into. **Smart Dimension** `SL_T` to the waterline → `= "h_sleeve_top"` (**above**, $+Y$), and `SL_B` to the waterline → `= "h_sleeve_bottom"` (**below**, $-Y$). Both globals are **positive magnitudes** — the global carries the distance, you pick the side as you place the dimension.
-4. **Verify the sleeve is square and 1 in long.** The end face spans `h_sleeve_top` $+$ `h_sleeve_bottom` $= 19.05$ mm, the walls run `x_fuse_sleeve_top` $-$ `x_fuse_tail` $= 25.40$ mm ($1$ in), and the planform half-width (§5.3.5) matches at `w_fuse_sleeve_half` $= 9.5250$ — a clean $19.05 \times 19.05$ mm bore equal to `tail_exit_D`.
+4. **Verify the sleeve is square and 1 in long.** The end face spans `h_sleeve_top` $-$ `h_sleeve_bottom` $= 25.40$ mm, the walls run `x_fuse_sleeve_top` $-$ `x_fuse_tail` $= 25.40$ mm ($1$ in), and the planform half-width (§5.3.5) matches at `w_fuse_sleeve_half` $= 9.5250$ — a clean $19.05 \times 19.05$ mm bore equal to `tail_exit_D`.
 
-   The **nose** flat is set by the two absolute heights `h_nose_top` / `h_nose_bottom` (blunt but exact); the **sleeve root** instead collapses to the `tail_exit_D` cap, and the **sleeve end** is set by the two absolute magnitudes `h_sleeve_top` / `h_sleeve_bottom`. The nose flat lands on `PLN_Fuse_Nose` and the sleeve root on `PLN_Fuse_Tail` for the §8.5 end-caps; the sleeve end face sits 1 in aft of the last fuselage plane (see the flag in §8.5).
+   The **nose** flat is set by the two absolute heights `h_nose_top` / `h_nose_bottom` (blunt but exact); the **sleeve root** instead collapses to the square sleeve cap, and the **sleeve end** is set by the two absolute magnitudes `h_sleeve_top` / `h_sleeve_bottom`. The nose flat lands on `PLN_Fuse_Nose` and the sleeve root on `PLN_Fuse_Tail` for the §8.5 end-caps; the sleeve end face sits 1 in aft of the last fuselage plane (see the flag in §8.5).
 
 </details>
 
@@ -875,7 +874,7 @@ The port half is an **open chain of seven segments** — the two half-width flat
 | `CL` | front cabin corner | firewall (`x_fuse_firewall`, +Z) | `w_fuse / 2` |
 | `TL` | rear cabin corner | cabin-rear (`x_fuse_bay_aft`, −Z) | `w_fuse / 2` |
 | `P2` | tail-to-end break | mid-tail (−Z) | `w_fuse_break` |
-| `EL` | sleeve root, outboard | tail (`x_fuse_tail`, −Z) | `tail_exit_D / 2` |
+| `EL` | sleeve root, outboard | tail (`x_fuse_tail`, −Z) | `w_fuse_sleeve_half` |
 | `SL_P` | sleeve end, outboard | sleeve (`x_fuse_sleeve_plan`, −Z) | `w_fuse_sleeve_half` |
 
 Two more vertices sit **on the centerline** ($X = 0$) as the mirror seam: **`NC`** at the nose station and **`SL_C`** at the **sleeve-end** station. Neither takes a width dimension — each is **Coincident** to the centerline and inherits its $Z$ from the flat-face relation in step 3.
@@ -911,7 +910,7 @@ Bind each vertex to the **same $Z$ column** the side profile uses, so the two ca
 
 Smart Dimension each vertex laterally back to the fuselage centerline ($X = 0$) with the parametric width equations:
 1. `NL` (nose flat) → `= "w_fuse_nose_half"`.
-   > **`EL` (tail cap) is the exception — `= "w_fuse_tail_half"`, not the nose half-width.** The tail cone terminates at the `tail_exit_D` = 0.75-in bounding, so its half-width shrinks to `tail_exit_D / 2` = 9.525 mm (matching the §4.4 tail-flat half-height). Dimension `EL` to the centerline `= "w_fuse_tail_half"`; leave `NL` at `= "w_fuse_nose_half"`. **`SL_P` (sleeve end) takes `= "w_fuse_sleeve_half"`** — the same 9.5250 mm, held as its own absolute so the sleeve reads as a constant-width box; with the `EL → SL_P` **Horizontal** relation from Phase 1 step 3 the two agree by construction, and this dimension is what proves it.
+   > **`EL` (tail cap) is the exception — `= "w_fuse_tail_half"`, not the nose half-width.** The tail cone terminates at the 1-in square sleeve, so its half-width shrinks to `tail_exit_D / 2` = 9.525 mm (matching the §4.4 tail-flat half-height). Dimension `EL` to the centerline `= "w_fuse_tail_half"`; leave `NL` at `= "w_fuse_nose_half"`. **`SL_P` (sleeve end) takes `= "w_fuse_sleeve_half"`** — the same 9.5250 mm, held as its own absolute so the sleeve reads as a constant-width box; with the `EL → SL_P` **Horizontal** relation from Phase 1 step 3 the two agree by construction, and this dimension is what proves it.
 2. `CL` (cabin max, fwd) → `= "w_fuse_cabin_fwd_half"`; `TL` (cabin max, aft) → `= "w_fuse_cabin_aft_half"`.
 3. `P1` and `P2` (transition breaks): select each vertex, **Smart Dimension** it laterally to the fuselage centerline, and type exactly `= "w_fuse_break"` (41.25 mm) — one absolute half-width, no fractional split.
 
@@ -988,7 +987,7 @@ Same two-projection rule as the wing (§7.2 Phase B): **spanwise** distances use
 8. **HT main spar (construction).** **Line** tool, tick **For construction**, root chord to tip chord. **Root end —** **Coincident** to the root chord line, then **Smart Dimension** its in-plane chordwise distance **from the root LE** `= "x_spar_root_HT_inc"`. **Tip end —** in-plane spanwise from the root LE `= "b_semi_HT_proj"`, and in-plane chordwise **from the tip LE** `= "x_spar_tip_HT_inc"`.
    > **Why `spar_main_pct` (no dedicated tail-spar global).** The stabilizer spar is co-located at the **same %-chord fraction** as the wing main spar, so `x_spar_root_HT` / `x_spar_tip_HT` re-use an existing fraction rather than introducing a second one. The elevator hinge line is a separate downstream feature at `c_elev_pct`.
 9. **Mirror the outline only.** **Mirror Entities** ▸ select the **LE, tip chord and TE** ▸ **Mirror About** = the **root chord line** ▸ **Copy** ticked ▸ green-check. Leave the **spar port-only** — like `AX_MainSpar`, the axis rides the single port line.
-   > **Exact only while `dihedral_HT` is zero.** A sketch mirror about a line in the sketch plane reflects across the plane spanned by that line and the sketch-plane normal. With no roll tilt on `PLN_Incidence_HT` that plane **is** the Right Plane, so this mirror is exact — the same reason the wing's is not (§7.2 Phase B Step 9). Give the stabilizer any dihedral and the mirrored half comes out with **anhedral**, fully defined and silently wrong. At non-zero `dihedral_HT`: delete this mirror, keep the stabilizer port-only, and mirror the finished component in the assembly (§I-6a).
+   > **Exact only while `dihedral_HT` is zero.** A sketch mirror about a line in the sketch plane reflects across the plane spanned by that line and the sketch-plane normal. With no roll tilt on `PLN_Incidence_HT` that plane **is** the Right Plane, so this mirror is exact — the same reason the wing's is not (§7.2 Phase B Step 9). Give the stabilizer any dihedral and the mirrored half comes out with **anhedral**, fully defined and silently wrong. At non-zero `dihedral_HT`: delete this mirror, keep the stabilizer port-only, and mirror the finished component in the assembly (§I-6b).
 10. Confirm `LAY_HTail_Incidence` reads **fully black**; **Exit** and drag it into `2_LAYOUT_SKETCHES`.
 
 <details>
@@ -1020,7 +1019,7 @@ The VT root chord from §5.8 step 1 (`= "c_root_VT"`, on the centerline) is the 
 <details>
 <summary><b>5.9 — Harden the sketch</b></summary>
 
-There is nothing left to mirror here — the fuselage dodecagon was already mirrored and closed in §5.3.5 Phase 4. The **stabilizer** is mirrored inside its own sketch (§5.8.1 Phase B Step 9), which is exact only because `dihedral_HT` is zero. The **wing** is *not* mirrored anywhere in the skeleton — `LAY_Wing_Incidence` is port-only by design and the starboard panel is created in the assembly (§7.2 Phase B Step 9, §I-6a).
+There is nothing left to mirror here — the fuselage dodecagon was already mirrored and closed in §5.3.5 Phase 4. The **stabilizer** is mirrored inside its own sketch (§5.8.1 Phase B Step 9), which is exact only because `dihedral_HT` is zero. The **wing** is *not* mirrored anywhere in the skeleton — `LAY_Wing_Incidence` is port-only by design and the starboard panel is created in the assembly (§7.2 Phase B Step 9, §I-6b).
 
 </details>
 
@@ -1605,7 +1604,7 @@ This one sketch carries **everything about the wing**: the 3-D planform outline,
 
 1. Select the solid **Line** tool, click the **Origin (root LE)**, and connect it to the tip station point. This is the wing **leading edge**.
 2. **Smart Dimension** the tip station point's in-plane chordwise distance **from the Origin** → `= "x_LE_tip_inc"` on the aft ($-Z$) side. This is what carries the LE sweep out to the tip.
-> **Do not add a Horizontal relation to the leading edge.** With `sweep_LE` = 11.02° the LE is *not* square to the span — a Horizontal relation will fight the `x_LE_tip_inc` dimension and over-define the sketch. The two dimensions (`b_semi_proj` spanwise, `x_LE_tip_inc` chordwise) fully locate the tip LE on their own.
+> **Do not add a Horizontal relation to the leading edge.** With a non-zero `sweep_LE` the LE is *not* square to the span — a Horizontal relation will fight the `x_LE_tip_inc` dimension and over-define the sketch. The two dimensions (`b_semi_proj` spanwise, `x_LE_tip_inc` chordwise) fully locate the tip LE on their own.
 
 </details>
 
@@ -1669,7 +1668,7 @@ This one sketch carries **everything about the wing**: the 3-D planform outline,
 <details>
 <summary><b>Step 9 — close out (port only; do not mirror)</b></summary>
 
-1. **Do not mirror this sketch.** `LAY_Wing_Incidence` stays **port ($+X$) only** — the outline, both spars, the joiner, the rib points, the MAC line, the control stations and the hinge lines all ride the single port panel. The starboard side is created downstream, in the assembly (**§I-6a**).
+1. **Do not mirror this sketch.** `LAY_Wing_Incidence` stays **port ($+X$) only** — the outline, both spars, the joiner, the rib points, the MAC line, the control stations and the hinge lines all ride the single port panel. The starboard side is created downstream, in the assembly (**§I-6b**).
    > **Why a sketch mirror cannot work here.** **Mirror Entities** about a line $L$ lying in the sketch plane is a 3-D reflection across the plane spanned by $L$ and the sketch-plane normal — **not** across the Right Plane. `PLN_Incidence` is rolled by `dihedral` about `AX_Long`, so that reflection plane is rolled off vertical by the same angle: the mirrored panel stays in the tilted plane and *descends* as it runs outboard. The starboard tip lands at $-b_{semi}\tan\Gamma$ instead of $+b_{semi}\tan\Gamma$ — an anhedral panel, a tip error of roughly 72 mm and an $8^\circ$ kink across the root. Nothing errors out; the sketch still solves and still reads fully defined.
    > **`AX_Long` is not a valid mirror line either.** It lies in `PLN_Incidence` only while `i_wing` is zero. Give the wing any incidence and the axis leaves the sketch plane, so the selection fails regardless of dihedral.
    > **Do not "fix" this with a second plane.** Adding a `PLN_Incidence_STBD` and redrawing the panel duplicates the driving geometry, and the two halves then drift independently — the exact failure the **one-variable rule** exists to prevent.
@@ -2092,7 +2091,7 @@ Lay three centerline points whose stations are computed live from the weight glo
 6. **Assembly audit of the travel band.** In the top **assembly** (§11), with the real parts loaded:
    - For each of the `Loaded`, `Drained`, and `Empty` configurations: **Tools ▸ Evaluate ▸ Mass Properties**, read the reported **centre-of-mass $Z$** (the aft-distance coordinate).
    - Confirm each actual CG lands on (or near) its matching `PT_CG_loaded` / `_drained` / `_empty` marker, and that **all three fall between `PT_CG_fwd` and `PT_CG_aft`**.
-   - Back-check the static margin for each state: $SM = (x_{NP} - x_{CG,\,state}) / MAC$ must stay inside $[SM_{min}, SM_{max}]$ (0.08–0.15).
+   - Back-check the static margin for each state: $SM = (x_{NP} - x_{CG,\,state}) / MAC$ must stay inside $[SM_{min}, SM_{max}]$ (0.08 – 0.35).
    > **Skeleton targets vs. real CG.** These markers are *computed targets* on a body-free skeleton (§11); the authoritative CG is the assembly Mass-Properties reading. The audit is confirming the real parts land where the skeleton predicts.
 
 </details>
@@ -2527,7 +2526,7 @@ Because the side profile and the planform both break at the mid-nose and mid-tai
 | 3 | `PLN_Fuse_Firewall` | top keel `TF → TR` / bottom keel `BF → BR` | `CL` (`w_fuse / 2`) | `SET_Fuse_Firewall` |
 | 4 | `PLN_Fuse_Bay_Aft` | keels `TF → TR` / `BF → BR` | `TL` (`w_fuse / 2`) | `SET_Fuse_Bay_Aft` |
 | 5 | `PLN_Fuse_MidTail` *(new)* | `M2` / `M3` | `P2` (`w_fuse_break`) | `SET_Fuse_MidTail` |
-| 6 | `PLN_Fuse_Tail` | `TT` / `TB` (sleeve root, `tail_exit_D / 2`) | `EL` (`tail_exit_D / 2`) | `SET_Fuse_Tail` |
+| 6 | `PLN_Fuse_Tail` | `TT` / `TB` (sleeve root, `h_tail_top` / `h_tail_bottom`) | `EL` (`w_fuse_sleeve_half`) | `SET_Fuse_Tail` |
 
 > **⚠ The boom sleeve is *not* in this loft.** Sections 1–6 run nose → `PLN_Fuse_Tail`, which is now the **sleeve root**, not the aft end of the fuselage. The 1-in sleeve box (`SL_T` / `SL_B` / `SL_P` / `SL_C` at 177.80 mm aft) sits beyond the last fuselage plane, so this loft stops at the sleeve mouth. Close it downstream either by (a) adding a seventh fuselage plane at the sleeve station plus a seventh identical section — the sleeve is constant-section, so section 7 is a copy of section 6 — or (b) leaving the loft at six and extruding the sleeve 1 in aft off `SET_Fuse_Tail` in the solid part. **No seventh plane has been added to §7.3.6**; that changes the published plane set, so it is your call.
 
@@ -2565,7 +2564,7 @@ Every bulbous section takes its **crown height** and **flat-floor depth** from t
 3. **Bind the flare vertex.** Make the **outermost flare control vertex** (3 / 9 o'clock) **Coincident** to the matching rail. This binds the section's **maximum lateral expansion** to the planform wireframe, while the height and the floor coordinates resolve independently via the side-profile pierces. The floor corners (4 / 8) keep their `w_floor_pct` fraction of that width along the flat floor; the upper-crown points (1 / 2) ride the spline in between.
    > **Why bind the flare, not the floor.** In the old boxy section the widest point *was* the floor corner, so the floor pierced the planform. Here the bulge carries the max width at mid-height, so the **flare vertex** is the point that must lock to the planform — otherwise the section's true widest ring floats free between stations and the loft bulges or pinches. The floor is now a *narrower* inboard chord (`w_floor_pct`), free to stay flat.
 4. **Verify & name.** The bulbous profile and its twelve clock vertices turn solid **black** (Fully Defined). **Exit Sketch**, press **F2**, and rename it per the Phase 1 table (`SET_Fuse_Nose`, `SET_Fuse_MidNose`, …).
-   > **Tail cap.** `SET_Fuse_Tail` closes to the `tail_exit_D` = 0.75-in bounding — flare, floor and apex all collapse toward the ±`tail_exit_D / 2` cap, so the loft terminates on a clean ≈ 19 mm ring.
+   > **Tail cap.** `SET_Fuse_Tail` closes to the 1-in square sleeve — flare, floor and apex all collapse toward the ±`w_fuse_sleeve_half` cap, so the loft terminates on a clean ≈ 19 mm ring.
    > **Decoupling stays intact.** Each section's $Z$ comes only from its `PLN_Fuse_*` plane, so the fuselage never rebuilds when the wing rib grid flexes.
 
 </details>
@@ -3528,7 +3527,7 @@ Each is framed as **Detect → Fix → Prevent** so it's actionable when you hit
 
 **2a. Sketch-mirroring a surface that sits on a rolled plane.** The silent variant of pitfall 2, and the one the symptoms above will **not** catch. **Mirror Entities** reflects across the plane spanned by the mirror line and the sketch-plane normal; on `PLN_Incidence` that plane is rolled off vertical by `dihedral`, so the mirrored half is a valid, fully-defined, *anhedral* panel.
 - *Detect:* **Normal To** `LAY_Front_View` — the two panels form a shallow **X** rather than a **V**; or **Measure** the starboard tip in $Y$ and it reports the negative of the port tip. A fully-defined sketch proves nothing here.
-- *Fix:* delete the mirror. Keep the surface port-only and mirror the finished **component** across the Right Plane in the assembly (§I-6a), or mirror a **surface body** about the Right Plane inside the skeleton — never a sketch.
+- *Fix:* delete the mirror. Keep the surface port-only and mirror the finished **component** across the Right Plane in the assembly (§I-6b), or mirror a **surface body** about the Right Plane inside the skeleton — never a sketch.
 - *Prevent:* before any **Mirror Entities**, ask whether the sketch plane is rolled about the longitudinal axis. If it is, the tool is the wrong one (§7.2 Phase B Step 9).
 
 **3. "Locate part with Move/Copy" left checked on Insert Part.** Parts then come in offset and won't mate origin-to-origin.

@@ -22,6 +22,11 @@ TRANSFORM (identical to AIRCRAFT_AIRFOIL_TRANSFORM_MICRO26.xlsx, cells D3/E3):
     Y = [ (0.25 - x)*sin(i) + y*cos(i) - 0.25*sin(i) ] * c + span*tan(dihedral)
     Z = [ (0.25 - x)*cos(i) - y*sin(i) - 0.25     ] * c - span*tan(sweep_LE)
 
+twist_tip is a POSITIVE washout magnitude and is SUBTRACTED, matching
+    "i_tip" = "i_wing" - "twist_tip"
+in skeleton_equations_micro.txt. Both are zero at present, so this sign is
+currently invisible; it stops being invisible the moment washout is dialled in.
+
 x, y are normalised airfoil coordinates; i is the section incidence; the
 section rotates about the quarter-chord point (0.25, 0). Aft is -Z, up is +Y,
 port is +X, origin at the wing-root leading edge.
@@ -56,7 +61,7 @@ def read_globals(path):
     if missing:
         raise SystemExit(f"missing numeric global(s) in {path}: {', '.join(missing)}")
     return dict(b_semi=vals["b_semi"], c_root=vals["c_root"], c_tip=vals["c_tip"],
-                i_root=vals["i_wing"], i_tip=vals["i_wing"] + vals["twist_tip"],
+                i_root=vals["i_wing"], i_tip=vals["i_wing"] - vals["twist_tip"],
                 sweep_LE=vals["sweep_LE"], dihedral=vals["dihedral"])
 
 

@@ -32,7 +32,7 @@ Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requ
 
 > **The one-variable rule.** Every SolidWorks Smart Dimension, plane **Offset Distance**, and **Modify** box takes exactly **one** global — `= "some_global"` — never an expression. All derivation lives in `skeleton_equations_micro.txt`. If a dimension needs a computed value, that computation gets its own named global here first. The **Derived-for-dimensioning** globals below exist purely to satisfy this rule: each one wraps a formula that used to be typed into a dimension box.
 
-> **The radians rule.** Trig arguments in this file are converted explicitly, so the SolidWorks **Angular equation units** drop-down (Tools ▸ Equations) must be set to **Radians** in every document that carries this equation set. It is a per-document setting and SolidWorks defaults it to **Degrees**, which converts a second time and silently collapses every swept station toward zero — no error, just wrong geometry. `check.py` cannot read the drop-down, so it enforces the half it can see: no trig call in the file may be written without its `pi/180` conversion. Verify by eye after import — the **Value** column for `x_LE_tip_inc` reads *(≈100.8767)* mm, not *(≈1.74)* mm.
+> **The radians rule.** Trig arguments in this file are converted explicitly, so the SolidWorks **Angular equation units** drop-down (Tools ▸ Equations) must be set to **Radians** in every document that carries this equation set. It is a per-document setting and SolidWorks defaults it to **Degrees**, which converts a second time and silently collapses every swept station toward zero — no error, just wrong geometry. `check.py` cannot read the drop-down, so it enforces the half it can see: no trig call in the file may be written without its `pi/180` conversion. Verify by eye after import — the **Value** column for `x_LE_tip_inc` reads *(≈112.0000)* mm, not *(≈1.93)* mm.
 
 </details>
 
@@ -46,7 +46,7 @@ Tailored to the **2026 SAE Aero Design rules, Section 9 (Micro Class Design Requ
 | `b` | $b$ | Wingspan — **no cap, but penalized → minimize** `[R §9]` | mm | 1150 |
 | `c_root` | $c_r$ | Root chord | mm | 225 |
 | `c_tip` | $c_t$ | Tip chord | mm | 225 |
-| `sweep_LE` | $\Lambda_{LE}$ | Leading-edge sweep | deg | 11.02 |
+| `sweep_LE` | $\Lambda_{LE}$ | Leading-edge sweep, over `b_semi` | deg | 12.2004687 |
 | `dihedral` | $\Gamma$ | Dihedral angle (inboard) | deg | 4.0 |
 | `i_wing` | $i_w$ | Wing incidence / setting angle | deg | 0.0 |
 | `twist_tip` | $\varepsilon_t$ | Tip washout (neg = washout) | deg | 0.0 |
@@ -79,7 +79,10 @@ Local chord at spanwise station $y$ (drives rib chords / spar line): $\;c(y) = c
 | `spar_rear_pct` | Rear spar / shear web | %chord | 0.70 |
 | `n_rib` | Ribs per semi-span (incl. root & tip) | — | 7 |
 | `rib_root_off` | First rib offset from centerline | mm | 20 |
-| `rib_thk` | Rib material thickness | mm | 3.0 |
+| `rib_thk` | Rib material thickness (1/16 in wood) | mm | 1.5875 |
+| `rib_thk_div` | Divider-rib thickness (1/8 in wood); separates flap from aileron | mm | 3.175 |
+| `n_rib_div` | Divider-rib index, 1-based from the root rib | — | 4 |
+| `hinge_gap` | Control-surface end to adjacent rib face clearance (1/16 in) | mm | 1.5875 |
 | `sparcap_w` | Spar-cap width | mm | 6.0 |
 | `sparcap_h` | Spar-cap height | mm | 6.0 |
 | `web_thk` | Shear-web thickness | mm | 1.5 |
@@ -107,7 +110,7 @@ The spar lines are %chord: absolute spar-X at a station = LE-X + `spar_pct` × $
 | Variable | Symbol | Description | Units | Starter |
 |---|---|---|---|---|
 | `V_H` | $V_H$ | Horizontal tail volume coefficient | — | 0.98 |
-| `l_HT` | $l_{HT}$ | Wing $c/4$ → HT $c/4$ moment arm (yields `x_HT_LE_root` = 850, matching XFLR5) | mm | 780 |
+| `l_HT` | $l_{HT}$ | Wing $c/4$ → HT $c/4$ moment arm — **now derived** from `x_tail_LE_root` | mm | 674.0878 |
 | `AR_HT` | $AR_{HT}$ | HT aspect ratio | — | 2.35 |
 | `taper_HT` | $\lambda_{HT}$ | HT taper ratio | — | 1.00 |
 | `i_HT` | $i_{HT}$ | HT incidence | deg | −2.0 |
@@ -137,7 +140,7 @@ $$S_{HT} = \frac{V_H\,S\,\bar c}{l_{HT}}, \qquad b_{HT} = \sqrt{AR_{HT}\,S_{HT}}
 | Variable | Symbol | Description | Units | Starter |
 |---|---|---|---|---|
 | `V_V` | $V_V$ | Vertical tail volume coefficient | — | 0.073 |
-| `l_VT` | $l_{VT}$ | Wing $c/4$ → VT $c/4$ moment arm | mm | 780 |
+| `l_VT` | $l_{VT}$ | Wing $c/4$ → **fin MAC** $c/4$ moment arm — **now derived**, measured to the AC | mm | 701.0109 |
 | `AR_VT` | $AR_{VT}$ | VT aspect ratio, **geometric single-sided** ($h^2/S_{VT}$; XFLR5 reports 2× this) | — | 1.54 |
 | `taper_VT` | $\lambda_{VT}$ | VT taper ratio | — | 0.53 |
 | `sweep_VT` | $\Lambda_{VT}$ | VT LE sweep | deg | 16.70 |
@@ -172,9 +175,8 @@ Longitudinal stations are **positive distances** from the wing-root LE (forward 
 | `x_motor` | — | Motor / prop-plane, **forward** distance from LE (= cabin front wall, 6 in fwd) | mm | 152.40 |
 | `nose_len` | — | Nose-cone / front-taper length (= 6 in) | mm | 152.40 |
 | `x_nose` | — | Nose-tip, **forward** from LE — derived `= x_motor + nose_len` | mm | 304.80 |
-| `L_fuse` | $L_f$ | **Pod** length — derived `= x_fuse_nose + x_fuse_tail` (the empennage rides a tail boom, deliberately **not** modeled in the skeleton) | mm | 457.20 |
+| `L_fuse` | $L_f$ | **Pod** length — derived `= x_fuse_nose + x_fuse_sleeve_top` (the empennage rides a tail boom, deliberately **not** modeled in the skeleton) | mm | 487.20 |
 | `cabin_len` | — | Constant-section cabin length (= 10 in), firewall → rear wall | mm | 254 |
-| `tail_exit_D` | — | Tail-cone exit bounding diameter (= 0.75 in) | mm | 19.05 |
 | `crown_sh_pct` | — | Cabin-crown Style-Spline side-control height / `h_fuse` | — | 0.65 |
 | `crown_apex_pct` | — | Cabin-crown Style-Spline flat-apex half-width / (`w_fuse`/2) | — | 0.30 |
 
@@ -276,10 +278,10 @@ Micro rolls for takeoff (main gear stays on the take-off line, one release) and 
 | `W_container` | — | Payload-container mass (mass model only; container not modeled) | g | 120 |
 | `V_water` | $V_w$ | Water carried (**≥ 1981 cm³ = 67 fl oz min**) `[R §9]` | cm³ | 2000 |
 | `rho_water` | $\rho_w$ | Water density | g/cm³ | 1.0 |
-| `CG_pct` | $k_{CG}$ | Target CG location | %MAC | 0.28 |
+| `x_CG_root` | $x_{CG}$ | CG station aft of the wing root LE | mm | 22.0 |
 | `x_NP` | $x_{NP}$ | Neutral point (aft distance from LE) from XFLR5/AVL (Micro TDS req.) `[R TDS]` | mm | 95 (set from AVL) |
 | `SM_min` | — | Min acceptable static margin | — | 0.08 |
-| `SM_max` | — | Max acceptable static margin | — | 0.15 |
+| `SM_max` | — | Max acceptable static margin | — | 0.35 |
 **Derived**
 | Variable | Equation | Units |
 |---|---|---|
@@ -400,12 +402,12 @@ Each of these exists so a SolidWorks dimension can reference **one** name instea
 | `x_bat_aft` | 80.6300 | battery aft face (§I-5) |
 | `x_CG_drained` | 215.6909 | drained CG (§7.8.3) |
 | `x_CG_empty` | 232.6754 | empty CG (§7.8.3) |
-| `x_LE_tip` | 100.8767 | wing tip LE, chordwise (§7.2 Phase B) |
+| `x_LE_tip` | 112.0000 | wing tip LE, chordwise (§7.2 Phase B) |
 | `y_MAC_proj` | 288.2020 | MAC line, in-plane span (§7.2 Phase B) |
 | `rib_root_off_proj` | 20.0488 | rib seed, in-plane span (§7.2 Phase B) |
 | `rib_pitch_proj` | 83.2027 | rib pattern, in-plane pitch (§7.2 Phase B) |
 | `y_emp_axis` | 25.0000 | empennage datum height above Top Plane (§2.3.1) — INPUT |
-| `x_LE_tip_inc` | 100.8767 | wing tip LE, in-plane chordwise (§7.2 Phase B) |
+| `x_LE_tip_inc` | 112.0000 | wing tip LE, in-plane chordwise (§7.2 Phase B) |
 | `x_spar_root_inc` | 56.2500 | main spar root, in-plane chordwise (§7.2 Phase B) |
 | `x_spar_tip_swept_inc` | 157.1267 | main spar tip, in-plane chordwise (§7.2 Phase B) |
 | `x_rspar_root_inc` | 157.5000 | rear spar root, in-plane chordwise (§7.2 Phase B) |
@@ -431,7 +433,7 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "b"             = 1150      'wingspan [mm]  NO cap, but span is PENALIZED -> minimize
 "c_root"        = 225       'root chord [mm]
 "c_tip"         = 225       'tip chord [mm]
-"sweep_LE"      = 11.02     'LE sweep [deg]
+"sweep_LE"              = 12.2004687   'wing LE sweep [deg] = arctan(112/518) over b_semi, from XFLR5 Section 2 offset'
 "dihedral"      = 4         'dihedral [deg]
 "i_wing"        = 0.0       'wing incidence [deg]
 "twist_tip"     = 0.0       'tip WASHOUT magnitude [deg]; POSITIVE = tip incidence lower than root (subtracted in i_tip), never enter a negative
@@ -448,7 +450,10 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "spar_rear_pct" = 0.70      'rear spar @ %chord
 "n_rib"         = 7         'ribs per semi-span
 "rib_root_off"  = 20        'first rib offset from centerline [mm] (spanwise)
-"rib_thk"       = 3.0
+"rib_thk"               = 1.5875    'standard rib thickness [mm] = 1/16 in wood'
+"rib_thk_div"           = 3.175     'divider-rib thickness [mm] = 1/8 in wood; the rib between flap and aileron'
+"n_rib_div"             = 4         'divider-rib index, 1-based from the root rib; must be <= n_rib'
+"hinge_gap"             = 1.5875    'spanwise clearance between a control-surface end and the adjacent rib face [mm] = 1/16 in'
 "sparcap_w"     = 6.0
 "sparcap_h"     = 6.0
 "web_thk"       = 1.5
@@ -456,7 +461,8 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "tc_root"       = 0.14
 "tc_tip"        = 0.14
 "rib_pitch"     = ("b_semi" - "rib_root_off") / ("n_rib" - 1)   'spanwise pitch [mm]
-"rib_root_off_physical" = "rib_root_off" * sqr("b_semi"^2 + ("b_semi"*tan("dihedral"*pi/180))^2 + ("spar_main_pct"*("c_root"-"c_tip"))^2) / "b_semi"   'first rib offset ALONG 3D spar (physical) [mm]; = rib_root_off * (3D spar len / semi-span); tracks rib_root_off
+"y_rib_div"             = "rib_root_off" + ("n_rib_div" - 1) * "rib_pitch"   'spanwise station of the 1/8 in divider rib [mm]'
+"rib_root_off_physical" = "rib_root_off" * sqr("b_semi"^2 + ("b_semi"*tan("dihedral"*pi/180))^2 + ("b_semi"*tan("sweep_LE"*pi/180) - "spar_main_pct"*("c_root"-"c_tip"))^2) / "b_semi"   'first rib offset ALONG the 3D spar [mm]; now includes the sweep term'
 "rib_root_off_proj"     = "rib_root_off" / cos("dihedral" * pi/180)   'RIB SEED: in-plane spanwise dist from Origin on PLN_Dihedral [mm]; /cos projects to X = rib_root_off
 "rib_pitch_proj"        = "rib_pitch" / cos("dihedral" * pi/180)   'RIB PATTERN: in-plane spanwise pitch on PLN_Dihedral [mm]; /cos projects to spanwise rib_pitch
 "x_spar_root"   = "spar_main_pct" * "c_root"   'AFT distance of main spar @ root [mm]
@@ -474,44 +480,47 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "x_joiner_root_inc"     = "x_joiner_root" / cos("i_wing" * pi/180)   'WING JOINER: in-plane chordwise dist from Origin on PLN_Incidence [mm]
 "x_MAC_LE_inc"          = "x_MAC_LE" / cos("i_wing" * pi/180)   'MAC LE: in-plane chordwise dist from Origin on PLN_Incidence [mm]
 "x_MAC_c4_inc"          = "x_MAC_c4" / cos("i_wing" * pi/180)   'MAC c/4: in-plane chordwise dist from Origin on PLN_Incidence [mm]
-"V_H"           = 0.98      'horizontal tail volume coeff
-"l_HT"          = 780        'wing c/4 -> HT c/4 arm [mm]; yields x_HT_LE_root = 850 aft (matches XFLR5 LE-to-LE)
-"AR_HT"         = 2.35
-"taper_HT"      = 1.00
+"c_root_HT"             = 170.0     'HT root chord [mm]; XFLR5 elevator Section 1'
+"c_tip_HT"              = 170.0     'HT tip chord [mm]; XFLR5 elevator Section 2'
+"b_HT"                  = 400.0     'HT full span [mm]; XFLR5 2 x Section 2 y'
+"x_tail_LE_root"        = 750.0     'TAIL DATUM: HT and VT root LE station aft of the wing root LE [mm]; XFLR5 plane position'
 "i_HT"          = 2.0       'HT incidence magnitude [deg]; POSITIVE, nose-DOWN vs AX_Long_Emp - direction set by the PLN_Incidence_HT Flip (5.8.1), never by a sign
 "sweep_HT"      = 0
 "c_elev_pct"    = 0.35
-"S_HT"          = "V_H" * "S_w" * "MAC" / "l_HT"
-"b_HT"          = sqr("AR_HT" * "S_HT")
-"b_semi_HT"     = "b_HT" / 2                           'horizontal tail semi-span [mm]
-"c_root_HT"     = 2 * "S_HT" / ("b_HT" * (1 + "taper_HT"))
-"c_tip_HT"      = "c_root_HT" * "taper_HT"
-"MAC_HT"        = (2/3) * "c_root_HT" * (1 + "taper_HT" + "taper_HT"^2) / (1 + "taper_HT")
-"y_MAC_HT"      = ("b_HT" / 6) * (1 + 2*"taper_HT") / (1 + "taper_HT")
-"x_HT_c4"       = "x_MAC_c4" + "l_HT"          'AFT distance of HT c/4 (same side as wing c4 -> sum) [mm]
-"x_HT_LE_root"  = "x_HT_c4" - 0.25 * "c_root_HT"   'AFT distance of HT root LE [mm]
+"taper_HT"              = "c_tip_HT" / "c_root_HT"   'HT taper ratio (derived from the two chords)'
+"b_semi_HT"             = "b_HT" / 2   'horizontal tail semi-span [mm]'
+"S_HT"                  = ("c_root_HT" + "c_tip_HT") / 2 * "b_HT"   'HT planform area [mm^2]'
+"AR_HT"                 = "b_HT"^2 / "S_HT"   'HT aspect ratio'
+"MAC_HT"                = (2/3) * "c_root_HT" * (1 + "taper_HT" + "taper_HT"^2) / (1 + "taper_HT")   'HT mean aerodynamic chord [mm]'
+"y_MAC_HT"              = ("b_HT" / 6) * (1 + 2*"taper_HT") / (1 + "taper_HT")   'HT MAC spanwise station from the root [mm]'
+"x_HT_LE_root"          = "x_tail_LE_root"   'AFT distance of HT root LE [mm]'
+"x_HT_c4"               = "x_HT_LE_root" + 0.25 * "c_root_HT"   'AFT distance of HT root c/4 [mm]; = MAC c/4 because sweep_HT=0 and taper_HT=1'
+"l_HT"                  = "x_HT_c4" - "x_MAC_c4"   'wing MAC c/4 -> HT c/4 moment arm [mm] (derived from the tail datum)'
+"V_H"                   = "S_HT" * "l_HT" / ("S_w" * "MAC")   'horizontal tail volume coeff (REPORTED, not a design input)'
 "x_spar_root_HT"        = "spar_main_pct" * "c_root_HT"   'AFT distance of HT main spar @ root, from HT root LE [mm]
 "x_spar_tip_HT"         = "spar_main_pct" * "c_tip_HT"   'AFT distance of HT main spar @ tip, from HT tip LE [mm]
 "x_spar_root_HT_inc"    = "x_spar_root_HT" / cos("i_HT" * pi/180)   'HT SPAR ROOT: in-plane chordwise dist from the HT root LE on PLN_Incidence_HT [mm]
 "x_spar_tip_HT_inc"     = "x_spar_tip_HT" / cos("i_HT" * pi/180)   'HT SPAR TIP: in-plane chordwise dist from the HT tip LE on PLN_Incidence_HT [mm]
 "x_HT_spar_root"        = "x_HT_LE_root" + "spar_main_pct" * "c_root_HT"   'HT SPAR ROOT: dist to Front Plane, aft (-Z) [mm]
 "x_HT_spar_tip"         = "x_HT_LE_root" + "b_semi_HT" * tan("sweep_HT" * pi/180) + "spar_main_pct" * "c_tip_HT"   'HT SPAR TIP: dist to Front Plane, aft (-Z) [mm]
-"V_V"                   = 0.06815375   'vertical tail volume coeff; back-solved from the XFLR5 fin (S_VT 26000)'
-"l_VT"          = 780        'wing c/4 -> VT c/4 arm [mm]; yields x_VT_LE_root = 850 aft (matches XFLR5 LE-to-LE)
-"AR_VT"                 = 1.53846154   'fin aspect ratio = b_VT^2/S_VT from XFLR5 (200^2 / 26000)'
-"taper_VT"              = 0.52941176   'fin taper = c_tip_VT/c_root_VT from XFLR5 (90 / 170)'
+"c_root_VT"             = 170.0     'fin root chord [mm]; XFLR5 fin Section 1'
+"c_tip_VT"              = 90.0      'fin tip chord [mm]; XFLR5 fin Section 2'
+"b_VT"                  = 200.0     'fin height [mm]; XFLR5 fin Section 2 y'
 "sweep_VT"              = 21.8014095   'fin LE sweep [deg] = arctan(80/200) from XFLR5; NOT its c/4 sweep of 16.70'
 "c_rud_pct"     = 0.40
-"S_VT"          = "V_V" * "S_w" * "b" / "l_VT"
-"b_VT"          = sqr("AR_VT" * "S_VT")
-"c_root_VT"     = 2 * "S_VT" / ("b_VT" * (1 + "taper_VT"))
-"c_tip_VT"      = "c_root_VT" * "taper_VT"
-"MAC_VT"        = (2/3) * "c_root_VT" * (1 + "taper_VT" + "taper_VT"^2) / (1 + "taper_VT")
-"x_VT_c4"       = "x_MAC_c4" + "l_VT"          'AFT distance of VT c/4 (same side as wing c4 -> sum) [mm]
-"x_VT_LE_root"  = "x_VT_c4" - 0.25 * "c_root_VT"   'AFT distance of VT root LE [mm]
+"taper_VT"              = "c_tip_VT" / "c_root_VT"   'fin taper ratio (derived from the two chords)'
+"S_VT"                  = ("c_root_VT" + "c_tip_VT") / 2 * "b_VT"   'fin planform area [mm^2]'
+"AR_VT"                 = "b_VT"^2 / "S_VT"   'fin aspect ratio'
+"MAC_VT"                = (2/3) * "c_root_VT" * (1 + "taper_VT" + "taper_VT"^2) / (1 + "taper_VT")   'fin mean aerodynamic chord [mm]'
+"y_MAC_VT"              = ("b_VT" / 3) * (1 + 2*"taper_VT") / (1 + "taper_VT")   'fin MAC height above the fin root [mm]'
+"x_VT_LE_root"          = "x_tail_LE_root"   'AFT distance of VT root LE [mm]'
+"x_MAC_LE_VT"           = "x_VT_LE_root" + "y_MAC_VT" * tan("sweep_VT" * pi/180)   'AFT distance of the fin MAC LE [mm]'
+"x_MAC_c4_VT"           = "x_MAC_LE_VT" + 0.25 * "MAC_VT"   'AFT distance of the fin MAC c/4 = the fin aerodynamic centre [mm]'
+"x_VT_c4"               = "x_VT_LE_root" + 0.25 * "c_root_VT"   'AFT distance of VT ROOT c/4 [mm]; root-section geometry only, not the AC'
+"l_VT"                  = "x_MAC_c4_VT" - "x_MAC_c4"   'wing MAC c/4 -> fin MAC c/4 moment arm [mm]; measured to the AC, not the root c/4'
+"V_V"                   = "S_VT" * "l_VT" / ("S_w" * "b")   'vertical tail volume coeff (REPORTED, not a design input)'
 "x_VT_spar_root"        = "x_VT_LE_root" + "spar_main_pct" * "c_root_VT"   'VT SPAR ROOT: dist to Front Plane, aft (-Z) [mm]
 "x_VT_spar_tip"         = "x_VT_LE_root" + "spar_main_pct" * "c_root_VT" + "b_VT" * tan("sweep_VT" * pi/180)   'VT SPAR TIP: dist to Front Plane, aft (-Z) [mm]
-"L_fuse"        = "x_fuse_nose" + "x_fuse_tail"   'total fuselage length [mm] = nose-fwd + tail-aft (derived)
 "w_fuse"        = 101.6      'max width [mm] = 4 in (cabin cross-section)
 "h_fuse"        = 101.6      'max height [mm] = 4 in (cabin cross-section)
 "h_fuse_top"    = 76.2       'top keel ABOVE waterline [mm]; = 75% of h_fuse (3 in); bottom keel = h_fuse - h_fuse_top (1 in)
@@ -521,7 +530,6 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "x_motor"       = 152.40    'motor/prop FORWARD distance from LE [mm]  (+Z side)
 "nose_len"      = 152.40    'nose-cone / front-taper length [mm] = 6 in (nose tip -> firewall)
 "x_nose"        = "x_motor" + "nose_len"   'nose-tip FORWARD distance from LE [mm]  (+Z side); firewall + 6 in taper
-"tail_exit_D"   = 19.05     'tail-cone exit bounding diameter [mm] = 0.75 in
 "crown_sh_pct"  = 0.65      'cabin crown Style-Spline side-control height / h_fuse (vertical rise; larger=squarer)
 "crown_apex_pct"= 0.30      'cabin crown Style-Spline flat-apex control half-width / (w_fuse/2)
 "h_crown_flare"         = "crown_sh_pct" * "h_fuse"   'cabin cross-section flare-vertex height above the floor [mm]
@@ -531,11 +539,11 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "h_clock_1_11"          = "h_fuse_top" * 2 / 3   'cross-section 1/11 o-clock spline point height above waterline [mm]
 "h_fill_top"            = "h_fuse_top" + 15   'fill-path upper endpoint height above waterline [mm]; 15 mm crown overshoot
 "c_ail_pct"     = 0.25
-"ail_in_pct"    = 0.55
-"ail_out_pct"   = 0.95
+"ail_in_pct"            = ("y_rib_div" + "rib_thk_div"/2 + "hinge_gap") / "b_semi"   'aileron inboard end: hinge_gap clear of the divider-rib outboard face'
+"ail_out_pct"           = ("b_semi" - "rib_thk"/2 - "hinge_gap") / "b_semi"   'aileron outboard end: hinge_gap clear of the tip rib face'
 "c_flap_pct"    = 0.30
-"flap_in_pct"   = 0.10
-"flap_out_pct"  = 0.55
+"flap_in_pct"           = ("rib_root_off" + "rib_thk"/2 + "hinge_gap") / "b_semi"   'flap inboard end: hinge_gap clear of the root rib face'
+"flap_out_pct"          = ("y_rib_div" - "rib_thk_div"/2 - "hinge_gap") / "b_semi"   'flap outboard end: hinge_gap clear of the divider-rib inboard face'
 "y_ail_in"      = "ail_in_pct"   * "b_semi"
 "y_ail_out"     = "ail_out_pct"  * "b_semi"
 "y_flap_in"     = "flap_in_pct"  * "b_semi"
@@ -581,14 +589,15 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "W_container"   = 120       'payload container [g]
 "V_water"       = 2000      'water volume [cm^3] (>= 1981 = 67 fl oz)
 "rho_water"     = 1.0       '[g/cm^3]
-"CG_pct"        = 0.28      'target CG @ %MAC aft of MAC LE
-"x_NP"          = 95        'neutral-point AFT distance from LE [mm]  SET from XFLR5/AVL
+"x_CG_root"             = 22.0      'CG station AFT of the wing root LE [mm]; XFLR5 Type 7 stability run'
+"x_NP"                  = 90.0      'neutral point aft of wing root LE [mm]; XFLR5 Type 7 VLM2 stability run'
 "SM_min"        = 0.08      'min static margin
-"SM_max"        = 0.15      'max static margin
+"SM_max"                = 0.35      'max static margin; +30.2% is intentional for heavy-payload launch stability'
 "W_water"       = "V_water" * "rho_water"
 "W_payload"     = "W_water"
 "W_TO"          = "W_empty" + "W_container" + "W_water"
-"x_CG"          = "x_MAC_LE" + "CG_pct" * "MAC"   'AFT distance of target CG [mm]
+"x_CG"                  = "x_CG_root"   'AFT distance of target CG [mm]'
+"x_MAC_CG"              = ("x_MAC_LE" - "x_CG_root") / "MAC"   'CG as a fraction of MAC, FORWARD of the MAC LE (positive magnitude)'
 "SM"            = ("x_NP" - "x_CG") / "MAC"        'static margin (NP, CG both aft distances)
 "x_CG_aft"      = "x_NP" - "SM_min" * "MAC"        'aft CG limit, AFT distance [mm]
 "x_CG_fwd"      = "x_NP" - "SM_max" * "MAC"        'fwd CG limit, AFT distance [mm]
@@ -624,8 +633,8 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "h_nose_bottom"         = 9.2364    'Exact height of nose flat bottom ABOVE waterline [mm] (crossed above WL after 75% lift)
 "h_nose_break_top"      = 68.1182   'Exact height of nose top shoulder break (M1) ABOVE waterline [mm] (raised +47.5 for 75% lift)
 "h_nose_break_bottom"   = 13.3096   'Exact depth of nose belly shoulder break (M4) BELOW waterline [mm] (still below; raised +47.5)
-"h_tail_break_top"      = 60    'Exact height of tail top shoulder break (M2) ABOVE waterline [mm] (75% of the 3.46 in M2-M3 split)
-"h_tail_break_bottom"   = 13.3096    'Exact depth of tail belly shoulder break (M3) BELOW waterline [mm] (25% of the 3.46 in M2-M3 split; positive magnitude, dimension downward)
+"h_tail_break_top"      = 60        'Exact height of the tail top shoulder break (M2) ABOVE waterline [mm]; absolute, user-set'
+"h_tail_break_bottom"   = 13.3096   'Exact depth of the tail belly shoulder break (M3) BELOW waterline [mm]; positive magnitude, dimension downward'
 "w_fuse_break"          = 38.10     'Exact port half-width at planform transition breaks (P1/P2) [mm]
 "h_tail_top"            = 35.78915    'Exact height of tail flat top ABOVE waterline [mm]
 "h_tail_bottom"         = 10.38915    'Exact height of tail flat bottom ABOVE waterline [mm]
@@ -638,6 +647,7 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "w_fuse_break_aft"      = 33.6493   'Exact port half-width at rear taper shoulder break (P2) [mm]
 "w_fuse_tail_half"      = 12.7    'Exact port half-width of tail cone exit cap (EL) [mm] (Old: tail_exit_D / 2)
 "x_fuse_sleeve_top"     = 177.80    'Absolute Z-station of sleeve top-aft vertex (SL_T) aft of LE [mm]; = x_fuse_tail + 1 in
+"L_fuse"                = "x_fuse_nose" + "x_fuse_sleeve_top"   'total fuselage length [mm]; the outline reaches the sleeve top, not x_fuse_tail'
 "h_sleeve_top"          = 35.78915   'Exact height of sleeve top-aft vertex (SL_T) ABOVE waterline [mm]; = h_tail_top (constant-section sleeve)
 "x_fuse_sleeve_bottom"  = 177.80    'Absolute Z-station of sleeve bottom-aft vertex (SL_B) aft of LE [mm]; = x_fuse_tail + 1 in
 "h_sleeve_bottom"       = 10.38915   'Exact height of sleeve bottom-aft vertex (SL_B) ABOVE waterline [mm]; = h_tail_bottom (constant-section sleeve)
@@ -666,7 +676,7 @@ This block is kept **byte-identical** to `skeleton_equations_micro.txt` (bulbous
 "rib_pitch_VT"   = "b_VT" / ("n_rib_VT" - 1)   'VT section-plane pitch up +Y [mm]; seeds LPTN_RibPlanes_VT, last plane at b_VT (derived, tracks n_rib_VT)
 "dihedral_HT"    = 0         'HT dihedral [deg]; drives PLN_Dihedral_HT tilt (0 = flat, on Top Plane)
 "b_semi_HT_proj"        = "b_semi_HT" / cos("dihedral_HT" * pi/180)   'HT SPAR TIP: in-plane spanwise dist from Origin on PLN_Dihedral_HT [mm]
-"h_VT_tip"              = "h_tail_top" + "b_VT"   'VT fin-top height above waterline [mm] = fin base + fin height
+"h_VT_tip"              = "y_emp_axis" + "b_VT"   'VT fin-top height above the waterline [mm]; the fin roots on AX_Long_Emp'
 ```
 ---
 

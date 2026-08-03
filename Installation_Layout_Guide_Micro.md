@@ -123,7 +123,8 @@ This section configures a **conventional (taildragger)** gear as body-free const
 * **Taildragger longitudinal alignment (mains forward of the CG).**
   1. Expand `2_LAYOUT_SKETCHES`, right-click `LAY_Side_Profile` ▸ **Edit Sketch**; **`Ctrl + 8`**. Right Plane: $+Z$ forward, $+Y$ up.
   2. Select the **Point** tool; drop a construction point for the main-gear axle. **Smart Dimension** its $Z$ from the Origin → `= "x_main"` (40 mm aft of LE).
-  3. **Confirm it leads the CG.** *Forward ($+Z$)* means a **smaller aft-distance**: `x_main` = 40 mm-aft sits forward of the 0.28-MAC target CG (`PT_CG_target` ≈ 69 mm-aft), so the mains lead the CG by ~29 mm — the forward offset that keeps the aircraft from nosing over under braking. If your axle lands at or behind `PT_CG_target`, **reduce `x_main`** (move the mains forward) until there is a positive forward margin.
+  3. **Confirm it leads the CG.** *Forward ($+Z$)* means a **smaller aft-distance**, so `x_main` must come out **smaller** than `x_CG_root`. Compare the two in **Tools ▸ Equations** before trusting the sketch. If the axle lands at or behind `PT_CG_target`, **reduce `x_main`** (move the mains forward) until there is a positive forward margin.
+     > **flag — this check currently FAILS.** `x_main` is 40 mm aft of the wing root LE and `x_CG_root` is 22 mm aft, so the mains sit **18 mm behind** the CG rather than ahead of it. A taildragger in that state settles back onto its tail and will not rotate. The CG moved forward when `x_CG_root` replaced the old 0.28-MAC assumption (which put it near 69 mm aft); `x_main` was never revisited. Resolve before building the gear: either bring `x_main` forward of `x_CG_root` with a deliberate margin, or re-examine the mass distribution that produced a 22 mm CG.
      > **Ground-loop caution.** Too *little* forward offset invites nose-over; too *much* raises ground-loop yaw sensitivity. Keep the mains a modest, deliberate distance ahead of the CG — not on top of it (§14 item 31).
 * **Strut deflection travel arc.**
   4. Drop a construction point at the **strut attachment frame vertex** (where the gear leg meets the lower fuselage). This is the arc centre.
@@ -248,10 +249,147 @@ This maps the tailwheel pushrod / cable trajectory from the steering kingpin for
 
 </details>
 
-<details>
-<summary><b>I-6a. Starboard side — assembly-level mirror  <i>(from skeleton §7.2)</i></b></summary>
+## I-6a. Wing ribs, flap and aileron  *(from skeleton §7.3, §7.7)*
 
-## I-6a. Starboard side — assembly-level mirror  *(from skeleton §7.2)*
+<details>
+<summary><b>I-6a. Wing ribs, flap and aileron  <i>(from skeleton §7.3, §7.7)</i></b></summary>
+
+The skeleton already publishes everything these parts consume: the seven rib planes in `3_RIB_PLANES`, the wing OML surface, `AX_MainSpar_3D`, `AX_Hinge_Ail` and `AX_Hinge_Flap`. What is built here are **solid bodies with exactly one consumer each**, so by the two-consumer test they belong at this layer and never in the skeleton. Port panel only — the starboard set is created in §I-6b. Budget ~90 min.
+
+**Material and thickness.** Every rib is cut from **1/16 in** wood except the **divider rib**, which is **1/8 in** and separates the flap from the aileron:
+
+| Global | Value | Meaning |
+|---|---|---|
+| `rib_thk` | 1/16 in | standard rib thickness |
+| `rib_thk_div` | 1/8 in | divider-rib thickness |
+| `n_rib_div` | 4 | which rib is the divider, counting from the root |
+| `y_rib_div` | derived | spanwise station of the divider rib |
+| `hinge_gap` | 1/16 in | clearance from a control-surface end to the adjacent rib face |
+
+> **The divider rib is the reason the control surfaces stop where they do.** `flap_out_pct`, `ail_in_pct`, `flap_in_pct` and `ail_out_pct` are **derived** from `y_rib_div`, `rib_thk`, `rib_thk_div` and `hinge_gap` — they are no longer typed numbers. Change the divider index or a wood thickness and all four hinge endpoints re-solve. Do not overwrite them with literals.
+> **Why the divider is thicker.** It carries the inboard aileron hinge and the outboard flap hinge on opposite faces, plus the torsional step between two independently deflecting surfaces. A 1/16 in rib in that position is the classic hinge-line failure.
+
+<details>
+<summary><b>Phase 1 — derive the skeleton into the rib part</b></summary>
+
+1. **File ▸ New ▸ Part ▸ OK.** **File ▸ Save As** → `Z:\SAE_Micro_2026\03_CAD\WING_RIBS_PORT.SLDPRT`.
+2. **Insert ▸ Part…**, select `SKELETON.SLDPRT`, click **Open**.
+3. In the PropertyManager, **untick** *Locate part with Move/Copy Feature*. Under **Transfer**, tick **Planes**, **Axes** and **Surface bodies**; leave **Solid bodies** unticked — the skeleton has none.
+4. Click the **Green Checkmark**. The tree gains the seven `PLN_Rib_*` planes, the `AX_*` axes and `SURF_Wing_OML`.
+5. Press **`Ctrl + Q`**. Confirm zero errors and that **Tools ▸ Evaluate ▸ Mass Properties** still reads **0.00 g** — nothing solid exists yet.
+
+> **Why derive rather than reference externally.** An Insert-Part derive gives one external reference to one file. Mating to the skeleton in the assembly instead would scatter references across every rib and break the moment a plane is renamed.
+
+</details>
+
+<details>
+<summary><b>Phase 2 — harvest the airfoil profile at each rib station</b></summary>
+
+Each rib is the wing's own section at that station, so the profile is taken **from the OML surface**, never redrawn.
+
+1. Expand `3_RIB_PLANES`. Right-click `PLN_Rib_1` ▸ **Sketch**.
+2. Press **`Ctrl + 8`** to look normal to the plane.
+3. Click **Tools ▸ Sketch Tools ▸ Intersection Curve**. With the sketch open, click `SURF_Wing_OML` in the tree.
+4. Green-check. A closed airfoil outline appears on the plane — the exact section, upper and lower surface, trailing edge closed.
+5. Confirm the outline is **black**. It is fully defined by construction, because it is the intersection of two pieces of existing geometry; it takes no dimensions and must take none.
+6. **Exit** the sketch, press **F2**, rename `SK_Rib_1_Profile`.
+7. Repeat steps 1–6 on `PLN_Rib_2` through `PLN_Rib_7`, naming each `SK_Rib_N_Profile`.
+
+> **This is the step that makes the ribs airfoil-shaped and keeps them that way.** The profiles are *linked* to `SURF_Wing_OML`. Re-export the airfoil curve files, rebuild, and all seven ribs change section together. A traced or offset outline would not.
+> **Success state:** seven closed profiles, each black, each sitting on its own rib plane, each visibly narrower than the last as the section moves outboard.
+
+</details>
+
+<details>
+<summary><b>Phase 3 — extrude the six 1/16 in ribs</b></summary>
+
+1. Select `SK_Rib_1_Profile` in the tree. Click **Insert ▸ Boss/Base ▸ Extrude…**
+2. Set **Direction 1** to **Mid Plane**. This is the whole trick: the rib grows symmetrically about its own plane, so the plane stays the rib's centreline and the pattern spacing keeps its meaning.
+3. In the depth box type `= "rib_thk"`.
+4. Green-check. **F2** → `RIB_1`.
+5. Repeat steps 1–4 for profiles 2, 3, 5, 6 and 7 → `RIB_2`, `RIB_3`, `RIB_5`, `RIB_6`, `RIB_7`. **Skip profile 4** — it is the divider and is built in Phase 4.
+6. **Tools ▸ Evaluate ▸ Mass Properties.** Six solid bodies. Set the material to your rib stock so the mass is real: right-click **Material** ▸ **Edit Material**.
+
+> **Do not pattern the ribs.** A linear pattern would give six identical copies of the root section. Each rib is a different chord and a different section, so each gets its own extrude from its own profile.
+
+</details>
+
+<details>
+<summary><b>Phase 4 — the 1/8 in divider rib</b></summary>
+
+1. Select `SK_Rib_4_Profile`. **Insert ▸ Boss/Base ▸ Extrude…**
+2. **Direction 1** → **Mid Plane**, exactly as Phase 3.
+3. In the depth box type `= "rib_thk_div"`.
+4. Green-check. **F2** → `RIB_4_DIVIDER`.
+5. **Verify it is the middle rib.** Open **Tools ▸ Equations** and read `y_rib_div`; it must equal `rib_root_off` plus three times `rib_pitch`. If you want the divider elsewhere, change `n_rib_div` — do not move the rib by hand.
+
+> **Mid Plane matters more here than anywhere else.** The divider is twice as thick, so extruding it one-sided would push its centreline half of `rib_thk_div` off `y_rib_div` and make the two hinge gaps unequal — one tight, one loose. Phase 6 checks for exactly this.
+
+</details>
+
+<details>
+<summary><b>Phase 5 — spar notches, sheeting rebate and lightening holes</b></summary>
+
+Cut these **through all seven ribs at once** so they can never disagree.
+
+* **Main spar notch.**
+  1. Right-click the **Top Plane** ▸ **Sketch**; **`Ctrl + 8`**.
+  2. Draw a **Center Rectangle** straddling `AX_MainSpar_3D`. **Smart Dimension** its height → `= "sparcap_h"`.
+  3. **Smart Dimension** its width → `= "sparcap_w"`.
+  4. **Insert ▸ Cut ▸ Extrude…**, set **Direction 1** to **Through All**, tick **Direction 2** and set it to **Through All** as well, tick **Feature Scope ▸ All bodies**. Green-check. **F2** → `CUT_Sparcap_Main`.
+* **Rear spar notch.**
+  5. Repeat steps 1–4 on the rear spar line, using `= "sparcap_w"` and `= "sparcap_h"` again. **F2** → `CUT_Sparcap_Rear`.
+* **Shear-web relief.**
+  6. Sketch a slot on the web face; **Smart Dimension** its thickness → `= "web_thk"`. Cut **Through All**, **All bodies**. **F2** → `CUT_Web`.
+* **Leading-edge sheeting rebate.**
+  7. Sketch the rebate on the upper and lower surfaces from the LE aft. **Smart Dimension** its chordwise extent → `= "LE_sheet_pct"`, then set the depth to your sheet stock thickness. Cut, **All bodies**. **F2** → `CUT_LE_Sheet`.
+* **Lightening holes.**
+  8. On each rib profile sketch, place circles between the spars, leaving at least `sparcap_w` of material to every edge. Cut **Through All** per body.
+  9. **Do not lighten `RIB_4_DIVIDER`.** It carries both hinge lines; the mass it saves is not worth the hinge pulling out.
+
+> **Success state:** every rib shows a matched pair of spar notches at the same chord fractions, and a rebate that lets the LE sheeting sit flush with the OML rather than proud of it.
+
+</details>
+
+<details>
+<summary><b>Phase 6 — split the flap and the aileron off the OML</b></summary>
+
+1. **File ▸ New ▸ Part**, save as `WING_CONTROLS_PORT.SLDPRT`, and derive the skeleton exactly as Phase 1.
+2. Right-click `PLN_Incidence` ▸ **Sketch**; **`Ctrl + 8`**.
+3. **Convert Entities** on `AX_Hinge_Flap` and `AX_Hinge_Ail` to bring both hinge lines into the sketch.
+4. Draw the four spanwise cut lines that bound the two surfaces. **Smart Dimension** each from the Origin in turn: `= "y_flap_in_proj"`, `= "y_flap_out_proj"`, `= "y_ail_in_proj"`, `= "y_ail_out_proj"`.
+   > **Use the `_proj` family, not the plain stations.** `PLN_Incidence` is rolled by `dihedral`, so a spanwise distance measured in that plane is longer than the true station by $1/\cos\Gamma$ (§3, tilted-sketch rule). Dimensioning to `y_flap_out` on a tilted sketch puts the cut in the wrong place.
+5. **Exit**. **Insert ▸ Molds ▸ Split**, choose the sketch as the trim tool, and select `SURF_Wing_OML` as the body to split.
+6. Green-check. Rename the resulting pieces **F2** → `FLAP_PORT`, `AILERON_PORT` and `WING_BOX_PORT`.
+7. **Bevel the control-surface leading edges.** On each of `FLAP_PORT` and `AILERON_PORT`, sketch a wedge on the hinge face and cut it, so the surface can deflect without its nose binding on the wing box. A symmetric bevel gives symmetric throw; a single-sided one gives more travel in one direction.
+8. **Save each body out.** Right-click the body ▸ **Insert into New Part…**, and save `FLAP_PORT.SLDPRT` and `AILERON_PORT.SLDPRT` alongside the parent.
+
+</details>
+
+<details>
+<summary><b>Phase 7 — verify the clearances</b></summary>
+
+1. **Measure the four gaps.** Open the assembly, then **Tools ▸ Evaluate ▸ Measure**, and take each of these in turn:
+   * root rib outboard face → `FLAP_PORT` inboard end
+   * `FLAP_PORT` outboard end → `RIB_4_DIVIDER` inboard face
+   * `RIB_4_DIVIDER` outboard face → `AILERON_PORT` inboard end
+   * `AILERON_PORT` outboard end → tip rib inboard face
+2. **All four must read `hinge_gap`.** They are derived from the same global, so a mismatch means a body was extruded one-sided instead of Mid Plane, or a cut was dimensioned to a plain station instead of its `_proj` value.
+3. **Deflect and re-check.** Rotate each control surface to its full travel and confirm the bevel clears the wing box and neither end fouls its rib.
+4. **Rebuild test.** Change `n_rib_div` by one, press **`Ctrl + Q`**, and confirm the divider rib moves and all four control-surface ends follow it. Change it back.
+
+> **Success state:** four gaps, all equal, all `hinge_gap`; and a divider rib that can be relocated from the equations file without touching a single sketch.
+
+</details>
+
+</details>
+
+---
+
+<details>
+<summary><b>I-6b. Starboard side — assembly-level mirror  <i>(from skeleton §7.2)</i></b></summary>
+
+## I-6b. Starboard side — assembly-level mirror  *(from skeleton §7.2)*
 
 The skeleton is a **half-model**: it publishes the port ($+X$) lifting surfaces plus the symmetry plane, and nothing starboard. The mirror happens **here**, at the last possible stage, on finished components — never on skeleton sketches.
 
@@ -377,7 +515,7 @@ A taildragger flies through two attitudes, so the propeller clearance must be le
 **31. Ground-loop instability (mains too close to the target CG).** A taildragger whose main axles sit almost under the CG has a tiny anti-nose-over arm and a short yaw base — it noses over on braking and ground-loops on rollout.
 - *Detect:* **Measure** `PT_Main_Axle` → `PT_CG_target` returns a near-zero (or aft) $Z$ offset; the mains are level with or behind the CG.
 - *Fix:* reduce `x_main` to move the mains **forward ($+Z$)** of the CG, restoring a deliberate anti-nose-over arm; re-confirm the §13.7.6 mains-forward check.
-- *Prevent:* treat "mains forward of `PT_CG_target`" as a hard rule for the conventional config; re-check the offset whenever `CG_pct`, `x_bay`, or `x_main` changes (§7.9.1).
+- *Prevent:* treat "mains forward of `PT_CG_target`" as a hard rule for the conventional config; re-check the offset whenever `x_CG_root`, `x_bay`, or `x_main` changes (§7.9.1).
 
 **32. Fill-path axis stops short of a re-lofted crown.** `AX_Fill_Path` Pierced to the crown profile *without* an overshoot dimension ends flush at the keel; a later taller crown re-loft then leaves the fill line buried inside the hull.
 - *Detect:* the axis top sits *on* the crown curve, not above it; after a `h_fuse_top` bump the deploy line no longer breaks the skin.

@@ -22,6 +22,7 @@ the same commit) or an accident (fix the file, not this number).
 """
 
 import argparse
+import math
 import os
 import re
 import sys
@@ -29,7 +30,7 @@ import sys
 # ---- baselines ----------------------------------------------------------
 HASH_HEADERS_SKELETON = 25      # count of ^#{3,} in the SKELETON guide
 H2_SKELETON           = 15      # count of ^## in the SKELETON guide
-GLOBAL_COUNT          = 239     # definitions in skeleton_equations_micro.txt
+GLOBAL_COUNT          = 247     # definitions in skeleton_equations_micro.txt
 
 # THE POSITIVE-MAGNITUDE RULE: no value in the equations file may be negative,
 # angles included. Direction belongs to the model (dimension side, plane Flip,
@@ -156,6 +157,19 @@ def main():
             "positive-magnitude rule: no negative values"
             + ("" if not neg else f" -- {len(neg)} found: " + ", ".join(neg)))
 
+    # definition order: SolidWorks evaluates the list top-down, so a global may
+    # never reference one defined below it. Nothing else catches this, and it is
+    # the failure mode that a derivation-direction change introduces.
+    seen, fwd = set(), []
+    for n, rhs in defs:
+        for ref in re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)"', rhs):
+            if ref not in seen:
+                fwd.append(f"{n} <- {ref}")
+        seen.add(n)
+    r.check(not fwd,
+            "definition order: no forward references"
+            + ("" if not fwd else f" -- {len(fwd)}: " + "; ".join(fwd[:4])))
+
     # radians rule: every trig argument carries its own pi/180 conversion
     badtrig = []
     for n, rhs in defs:
@@ -245,6 +259,41 @@ def main():
         r.check(not bad,
                 f"{f}: one-variable rule"
                 + ("" if not bad else f" — {len(bad)} expression(s): " + "; ".join(bad[:4])))
+
+    # ---- 6. evaluated-value invariants -------------------------------------
+    # Everything above is textual. This block resolves the equation graph and
+    # checks the results, because a value can be perfectly well-formed and still
+    # describe an aeroplane that will not fly.
+    print("\nevaluated values")
+    env = dict(sin=math.sin, cos=math.cos, tan=math.tan,
+               sqr=math.sqrt, abs=abs, pi=math.pi)
+    vals, pending = {}, list(defs)
+    for _ in range(len(defs) + 2):
+        still = []
+        for n, rhs in pending:
+            e = re.sub(r'"([A-Za-z_][A-Za-z0-9_]*)"', r'V["\1"]', rhs.replace("^", "**"))
+            try:
+                vals[n] = eval(e, {"__builtins__": {}}, dict(env, V=vals))
+            except Exception:
+                still.append((n, rhs))
+        prev = len(pending)
+        pending = still
+        if not pending or len(pending) == prev:
+            break
+
+    need = ("SM", "SM_min", "SM_max")
+    if all(k in vals for k in need):
+        sm, lo, hi = vals["SM"], vals["SM_min"], vals["SM_max"]
+        r.check(lo <= sm <= hi,
+                f"static margin {sm:.4f} within [{lo:.2f}, {hi:.2f}]")
+    else:
+        r.fail("static margin: SM / SM_min / SM_max did not resolve")
+
+    if pending:
+        r.check(False, f"{len(pending)} global(s) did not evaluate: "
+                       + ", ".join(n for n, _ in pending[:5]))
+    else:
+        r.ok(f"all {len(vals)} globals evaluate")
 
     # ---- summary -----------------------------------------------------------
     print()
